@@ -1,0 +1,87 @@
+/**
+ * Global Layout Styles
+ */
+
+/* Main Container - Flexbox two-column layout */
+.app-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+}
+
+/* Left Sidebar - Fixed width, sticky positioning */
+.app-sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  padding-bottom: 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* Main Content Area */
+.app-main {
+  flex: 1;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  min-width: 0;
+}
+
+/* Right Sidebar (Heatmap, etc.) */
+.app-aside {
+  width: var(--heatmap-width);
+  min-width: var(--heatmap-width);
+  padding: 16px;
+  background: var(--cell-background-color);
+  border-radius: var(--box-border-radius);
+  box-shadow: var(--shadows);
+  border: 1px solid var(--border-color);
+  position: sticky;
+  top: 20px;
+  height: fit-content;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+/* Responsive - Hide heatmap on medium screens */
+@media screen and (max-width: 1024px) {
+  .app-aside {
+    display: none;
+  }
+
+  .app-container {
+    max-width: 900px;
+  }
+}
+
+/* Responsive - Mobile layout (column-reverse) */
+@media screen and (max-width: 600px) {
+  .app-container {
+    flex-direction: column-reverse;
+    padding: 10px 20px;
+  }
+
+  .app-main {
+    padding-right: 0;
+    padding-top: 10px;
+    width: 100%;
+  }
+
+  .app-sidebar {
+    width: 100%;
+    position: static;
+    height: auto;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    padding-top: 20px;
+    background-color: var(--background-color);
+  }
+
+  .app-aside {
+    display: none;
+  }
+}

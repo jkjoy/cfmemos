@@ -1,0 +1,31 @@
+{
+  "name": "memos",
+  "version": "1.0.0",
+  "description": "A lightweight memo management system built on Cloudflare Workers",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler build",
+    "tail": "wrangler tail",
+    "db:create": "wrangler d1 create memos_db",
+    "db:init": "wrangler d1 execute memos_db --file=./schema.sql",
+    "db:local": "wrangler d1 execute memos_db --local --file=./schema.sql",
+    "fix:encoding": "wrangler d1 execute memos_db --file=./fix-encoding.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
+    "wrangler": "^3.22.1"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "memo",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.10.1"
+  }
+}

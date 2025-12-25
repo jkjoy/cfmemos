@@ -1,0 +1,51 @@
+/**
+ * CSS Variables - Design System
+ * Migrated from broadcastInline.js
+ */
+
+:root {
+  /* Colors */
+  --background-color: #f4f1ec;
+  --foreground-color: #000000;
+  --highlight-color: orangered;
+  --secondary-color: #999;
+  --border-color: rgba(0, 0, 0, 0.05);
+  --link-color: var(--highlight-color);
+  --cell-background-color: #fff;
+  --code-background-color: #f9f9f9;
+
+  /* Spacing */
+  --box-margin: 10px;
+  --sidebar-width: 200px;
+  --heatmap-width: 150px;
+
+  /* Border Radius */
+  --box-border-radius: 3px;
+  --media-border-radius: 8px;
+
+  /* Misc */
+  --dot-size: 8px;
+  --shadows: 0 1px 2px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02),
+    0 4px 8px rgba(0, 0, 0, 0.02), 0 8px 16px rgba(0, 0, 0, 0.02);
+
+  /* Breakpoints */
+  --breakpoint-mobile: 600px;
+  --breakpoint-tablet: 1024px;
+}
+
+/* Dark Theme */
+.dark-theme {
+  /* Colors - Dark Mode */
+  --background-color: #1a1a1a;
+  --foreground-color: #e0e0e0;
+  --highlight-color: #ff6b35;
+  --secondary-color: #888;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --link-color: #ff8c5a;
+  --cell-background-color: #242424;
+  --code-background-color: #2a2a2a;
+
+  /* Shadows - Adjusted for dark mode */
+  --shadows: 0 1px 2px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.2);
+}

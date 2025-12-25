@@ -1,0 +1,180 @@
+.explorePage {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.pageHeader {
+  margin-bottom: 30px;
+  padding: 30px;
+  background: linear-gradient(135deg, var(--highlight-color) 0%, #ff8c42 100%);
+  border-radius: var(--box-border-radius);
+  color: white;
+  box-shadow: var(--shadows);
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.pageDescription {
+  font-size: 16px;
+  margin: 0;
+  opacity: 0.95;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: flex-start;
+}
+
+.controls > div:first-child {
+  flex: 1;
+}
+
+.sortButtons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--cell-background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--box-border-radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground-color);
+  transition: all 0.2s ease;
+}
+
+.sortButton:hover {
+  background: var(--code-background-color);
+  border-color: var(--highlight-color);
+}
+
+.sortButton.active {
+  background: var(--highlight-color);
+  color: white;
+  border-color: var(--highlight-color);
+}
+
+.memoList {
+  margin-left: 28px;
+}
+
+.loading,
+.error,
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  background: var(--cell-background-color);
+  border-radius: var(--box-border-radius);
+  box-shadow: var(--shadows);
+  margin: 40px 0;
+}
+
+.loading {
+  color: var(--secondary-color);
+}
+
+.error {
+  color: #d32f2f;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--secondary-color);
+}
+
+.empty svg {
+  opacity: 0.5;
+}
+
+.empty h3 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.resultCount {
+  margin-top: 20px;
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--secondary-color);
+  background: var(--code-background-color);
+  border-radius: var(--box-border-radius);
+  border: 1px solid var(--border-color);
+}
+
+/* Responsive */
+@media screen and (max-width: 600px) {
+  .explorePage {
+    padding: 16px;
+  }
+
+  .pageHeader {
+    padding: 20px;
+  }
+
+  .headerContent {
+    gap: 12px;
+  }
+
+  .headerContent svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .pageTitle {
+    font-size: 22px;
+  }
+
+  .pageDescription {
+    font-size: 14px;
+  }
+
+  .controls {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sortButtons {
+    width: 100%;
+  }
+
+  .sortButton {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .memoList {
+    margin-left: 0;
+  }
+}
