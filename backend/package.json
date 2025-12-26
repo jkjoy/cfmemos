@@ -9,7 +9,7 @@
     "build": "wrangler build",
     "tail": "wrangler tail",
     "db:create": "wrangler d1 create memos_db",
-    "db:init": "wrangler d1 execute memos_db --file=./schema.sql",
+    "db:init": "wrangler d1 execute memos_db --file=./schema.sql --remote",
     "db:local": "wrangler d1 execute memos_db --local --file=./schema.sql",
     "fix:encoding": "wrangler d1 execute memos_db --file=./fix-encoding.sql"
   },

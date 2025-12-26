@@ -12,33 +12,20 @@ import rssApp from './handlers/rss';
 import accessTokensApp from './handlers/accessTokens';
 import webhooksApp from './handlers/webhooks';
 import identityProvidersApp from './handlers/identityProviders';
-import faviconData from './favicon.ico';
 
 const app = new Hono();
 
-// CORS 中间件 - 支持前端跨域请求
 app.use('/*', cors({
   origin: (origin) => {
-    // 允许的域名列表
-    const allowedOrigins = [
-      'http://localhost:5173'
-    ];
-
-    // 从环境变量获取额外的允许域名
-    const envOrigins = typeof ALLOWED_ORIGINS !== 'undefined'
-      ? ALLOWED_ORIGINS.split(',').map(o => o.trim())
-      : [];
-
-    const allAllowedOrigins = [...allowedOrigins, ...envOrigins];
-
-    // 检查是否在允许列表中
-    return allAllowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+    // 返回实际的origin，这样可以支持任何域名且允许携带凭证
+    // 如果没有origin（比如同源请求或某些工具），返回true
+    return origin || true;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Token'],
   exposeHeaders: ['Content-Length', 'Content-Type', 'X-Token'],
   maxAge: 86400,  // 24小时
-  credentials: true,
+  credentials: true,  // 支持携带凭证（cookies, authorization headers）
 }));
 
 // API 路由
@@ -241,14 +228,19 @@ app.get('/api/health', (c) => {
   });
 });
 
-// Favicon 路由
-app.get('/favicon.ico', (c) => {
-  return new Response(faviconData, {
-    headers: {
-      'Content-Type': 'image/x-icon',
-      'Cache-Control': 'public, max-age=31536000',
-    },
-  });
+// 顶层 RSS 路由（需要在通配符路由之前）
+// 全站 RSS Feed
+app.get('/rss.xml', async (c) => {
+  // 重定向到 API RSS 路由
+  const apiPath = '/api/v1/rss/rss.xml';
+  return c.redirect(apiPath);
+});
+
+// 用户 RSS Feed - 通过 ID
+app.get('/u/:userId/rss.xml', async (c) => {
+  const userId = c.req.param('userId');
+  const apiPath = `/api/v1/rss/u/${userId}/rss.xml`;
+  return c.redirect(apiPath);
 });
 
 // 资源文件访问路由 /o/r/:id/:filename

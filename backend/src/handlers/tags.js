@@ -41,6 +41,36 @@ app.get('/', async (c) => {
   try {
     const db = c.env.DB;
 
+    // 获取URL参数中的userId（可能是用户名或用户ID）
+    const userIdParam = c.req.query('userId');
+    let targetUserId = null;
+
+    // 如果提供了userId参数，尝试查找该用户
+    if (userIdParam) {
+      // 判断是用户名还是用户ID（数字）
+      const isNumeric = /^\d+$/.test(userIdParam);
+
+      if (isNumeric) {
+        // 如果是数字，直接使用
+        targetUserId = parseInt(userIdParam);
+      } else {
+        // 如果是字符串，查找用户名对应的ID
+        const userStmt = db.prepare('SELECT id FROM users WHERE username = ?');
+        const user = await userStmt.bind(userIdParam).first();
+        if (user) {
+          targetUserId = user.id;
+        }
+      }
+    } else if (currentUser) {
+      // 如果没有提供userId参数，使用当前登录用户
+      targetUserId = currentUser.id;
+    }
+
+    // 如果没有目标用户ID，返回空数组
+    if (!targetUserId) {
+      return jsonResponse([]);
+    }
+
     let query = `
       SELECT
         t.id,
@@ -56,14 +86,9 @@ app.get('/', async (c) => {
     const whereConditions = [];
     const bindValues = [];
 
-    // 只返回当前用户创建的标签
-    if (currentUser) {
-      whereConditions.push('t.creator_id = ?');
-      bindValues.push(currentUser.id);
-    } else {
-      // 未登录用户不返回任何标签
-      return jsonResponse([]);
-    }
+    // 只返回目标用户创建的标签
+    whereConditions.push('t.creator_id = ?');
+    bindValues.push(targetUserId);
 
     if (whereConditions.length > 0) {
       query += ' WHERE ' + whereConditions.join(' AND ');

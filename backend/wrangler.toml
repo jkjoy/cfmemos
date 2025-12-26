@@ -7,23 +7,11 @@ main = "src/index.js"
 compatibility_date = "2024-01-15"
 compatibility_flags = ["nodejs_compat"]
 
-# 配置文件导入规则
-[[rules]]
-type = "Data"
-globs = ["**/*.ico"]
-fallthrough = true
-
-# ========================================
-# 环境变量配置
-# ========================================
 [vars]
-# Gravatar CDN 代理配置（支持国内访问）
-GRAVATAR_CDN = "https://gravatar.loli.net"
-
 # CORS 允许的前端域名（逗号分隔）
 # 本地开发已默认包含 localhost:5173 和 localhost:3000
 # 这里添加生产环境的前端域名
-ALLOWED_ORIGINS = ""
+ALLOWED_ORIGINS = "https://memos.zxd.im"
 
 # 时区配置（IANA 时区数据库格式）
 # 示例: "Asia/Shanghai", "America/New_York", "Europe/London"
@@ -31,20 +19,12 @@ ALLOWED_ORIGINS = ""
 TIMEZONE = "Asia/Shanghai"
 
 # ========================================
-# 生产环境配置
-# ========================================
-[env.production.vars]
-ENVIRONMENT = "production"
-# 生产环境的前端域名，部署后需要更新
-# ALLOWED_ORIGINS = "https://your-frontend.pages.dev,https://your-domain.com"
-
-# ========================================
 # 数据库配置
 # ========================================
 [[d1_databases]]
 binding = "DB"
 database_name = "memos_db"
-database_id = "437a3815-ae40-4337-83f7-fde6f2487718"
+database_id = "e03f026e-1974-4b76-844a-e09b4f08ae08"
 
 # ========================================
 # 对象存储配置
