@@ -1,0 +1,11 @@
+name = "memos-frontend"
+compatibility_date = "2024-01-15"
+
+# Pages 项目配置
+pages_build_output_dir = "dist"
+
+# Service Binding 配置
+[[services]]
+binding = "BACKEND"
+service = "memos-api"
+environment = "production"

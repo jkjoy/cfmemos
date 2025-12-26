@@ -24,10 +24,13 @@ function generateRssFeed(options) {
     title,
     description,
     link,
+    baseUrl,  // 用于构建item链接的基础URL
     items = []
   } = options;
 
   const now = new Date().toUTCString();
+  // 如果没有提供baseUrl，则使用link作为baseUrl（向后兼容）
+  const itemBaseUrl = baseUrl || link;
 
   let rssItems = '';
   for (const item of items) {
@@ -42,10 +45,10 @@ function generateRssFeed(options) {
       if (imageResources.length > 0) {
         contentHtml += '\n\n';
         imageResources.forEach(resource => {
-          // 构建完整的图片URL
+          // 构建完整的图片URL，使用itemBaseUrl而不是link
           const imageUrl = resource.filepath.startsWith('http')
             ? resource.filepath
-            : `${link}${resource.filepath}`;
+            : `${itemBaseUrl}${resource.filepath}`;
           contentHtml += `&lt;img src="${escapeXml(imageUrl)}" alt="${escapeXml(resource.filename)}" style="max-width: 100%; height: auto;" /&gt;\n`;
         });
       }
@@ -54,8 +57,8 @@ function generateRssFeed(options) {
     rssItems += `
     <item>
       <title>${escapeXml(item.title || `Memo #${item.id}`)}</title>
-      <link>${escapeXml(link)}/m/${item.id}</link>
-      <guid isPermaLink="true">${escapeXml(link)}/m/${item.id}</guid>
+      <link>${escapeXml(itemBaseUrl)}/m/${item.id}</link>
+      <guid isPermaLink="true">${escapeXml(itemBaseUrl)}/m/${item.id}</guid>
       <pubDate>${pubDate}</pubDate>
       <description><![CDATA[${contentHtml}]]></description>
       ${item.creatorName ? `<author>${escapeXml(item.creatorName)}</author>` : ''}
@@ -78,8 +81,23 @@ function generateRssFeed(options) {
 
 /**
  * 获取网站基础URL
+ * 优先使用系统设置中的 instance-url，如果没有则使用请求URL
  */
-function getBaseUrl(request) {
+async function getBaseUrl(db, request) {
+  try {
+    // 从数据库读取 instance-url 设置
+    const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
+    const setting = await stmt.bind('instance-url').first();
+
+    if (setting && setting.value) {
+      // 移除末尾的斜杠（如果有）
+      return setting.value.replace(/\/$/, '');
+    }
+  } catch (error) {
+    console.error('Error reading instance-url from settings:', error);
+  }
+
+  // 回退到请求URL
   const url = new URL(request.url);
   return `${url.protocol}//${url.host}`;
 }
@@ -90,7 +108,7 @@ function getBaseUrl(request) {
 app.get('/rss.xml', async (c) => {
   try {
     const db = c.env.DB;
-    const baseUrl = getBaseUrl(c.req.raw);
+    const baseUrl = await getBaseUrl(db, c.req.raw);
 
     // 获取最近50条公开的memo
     const stmt = db.prepare(`
@@ -155,7 +173,7 @@ app.get('/u/:userId/rss.xml', async (c) => {
   try {
     const db = c.env.DB;
     const userId = c.req.param('userId');
-    const baseUrl = getBaseUrl(c.req.raw);
+    const baseUrl = await getBaseUrl(db, c.req.raw);
 
     // 验证用户是否存在
     const userStmt = db.prepare('SELECT id, username, nickname FROM users WHERE id = ?');
@@ -205,7 +223,8 @@ app.get('/u/:userId/rss.xml', async (c) => {
     const rssFeed = generateRssFeed({
       title: `Memos - ${user.nickname || user.username} 的动态`,
       description: `${user.nickname || user.username} 的最新备忘录`,
-      link: `${baseUrl}/user/${userId}`,
+      link: `${baseUrl}/u/${user.username}`,  // Channel link 指向用户页面
+      baseUrl: baseUrl,  // Item links 使用基础URL（不含 /u/username）
       items: memos
     });
 

@@ -1,0 +1,3 @@
+/api/* https://memos-api.zxd.im/api/:splat 200
+/o/* https://memos-api.zxd.im/o/:splat 200
+/* /index.html 200

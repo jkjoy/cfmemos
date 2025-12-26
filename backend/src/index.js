@@ -228,19 +228,16 @@ app.get('/api/health', (c) => {
   });
 });
 
-// 顶层 RSS 路由（需要在通配符路由之前）
+// 顶层 RSS 路由（为了更简洁的 URL）
 // 全站 RSS Feed
 app.get('/rss.xml', async (c) => {
-  // 重定向到 API RSS 路由
-  const apiPath = '/api/v1/rss/rss.xml';
-  return c.redirect(apiPath);
+  return c.redirect('/api/v1/rss/rss.xml', 301);
 });
 
-// 用户 RSS Feed - 通过 ID
+// 用户 RSS Feed
 app.get('/u/:userId/rss.xml', async (c) => {
   const userId = c.req.param('userId');
-  const apiPath = `/api/v1/rss/u/${userId}/rss.xml`;
-  return c.redirect(apiPath);
+  return c.redirect(`/api/v1/rss/u/${userId}/rss.xml`, 301);
 });
 
 // 资源文件访问路由 /o/r/:id/:filename

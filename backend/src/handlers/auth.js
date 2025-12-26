@@ -275,7 +275,11 @@ app.post('/signin/sso', async (c) => {
     const db = c.env.DB;
     const body = await c.req.json();
 
+    console.log('=== SSO Login Request ===');
+    console.log('Request body:', JSON.stringify(body));
+
     if (!body.identityProviderId || !body.code || !body.redirectUri) {
+      console.error('Missing required parameters');
       return errorResponse('identityProviderId, code and redirectUri are required', 400);
     }
 
@@ -288,23 +292,39 @@ app.post('/signin/sso', async (c) => {
     const idp = await idpStmt.bind(body.identityProviderId).first();
 
     if (!idp) {
+      console.error('Identity provider not found:', body.identityProviderId);
       return errorResponse('Identity provider not found', 404);
     }
+
+    console.log('IDP found:', idp.name, 'Type:', idp.type);
 
     let config;
     try {
       config = JSON.parse(idp.config);
+      console.log('Config parsed successfully');
     } catch (e) {
+      console.error('Failed to parse IDP config:', e);
       return errorResponse('Invalid identity provider configuration', 500);
+    }
+
+    // 提取实际的OAuth2配置（兼容前端的嵌套格式）
+    let oauth2Config = config;
+    if (config.oauth2Config) {
+      oauth2Config = config.oauth2Config;
+      console.log('Using nested oauth2Config');
     }
 
     // OAuth2 流程：用code换取access_token
     let tokenResponse;
     try {
-      const tokenUrl = getTokenUrl(idp.type, config);
+      const tokenUrl = getTokenUrl(idp.type, oauth2Config);
+      console.log('Exchanging code for token at:', tokenUrl);
+      console.log('IDP type:', idp.type);
+      console.log('Config has tokenUrl:', !!oauth2Config.tokenUrl);
+
       const tokenParams = new URLSearchParams({
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
+        client_id: oauth2Config.clientId,
+        client_secret: oauth2Config.clientSecret,
         code: body.code,
         redirect_uri: body.redirectUri,
         grant_type: 'authorization_code'
@@ -319,50 +339,107 @@ app.post('/signin/sso', async (c) => {
         body: tokenParams
       });
 
+      console.log('Token exchange response status:', response.status);
+
       if (!response.ok) {
-        console.error('Token exchange failed:', await response.text());
+        const errorText = await response.text();
+        console.error('Token exchange failed with status:', response.status);
+        console.error('Error response:', errorText);
         return errorResponse('Failed to exchange authorization code', 401);
       }
 
       tokenResponse = await response.json();
+      console.log('Token response received:', JSON.stringify(tokenResponse));
+      console.log('Token response received, has access_token:', !!tokenResponse.access_token);
     } catch (error) {
       console.error('Error exchanging code for token:', error);
+      console.error('Error stack:', error.stack);
       return errorResponse('Failed to authenticate with identity provider', 500);
     }
 
     // 获取用户信息
     let userInfo;
     try {
-      const userInfoUrl = getUserInfoUrl(idp.type, config);
+      const userInfoUrl = getUserInfoUrl(idp.type, oauth2Config);
+      console.log('Fetching user info from:', userInfoUrl);
+      console.log('Using access token:', tokenResponse.access_token?.substring(0, 20) + '...');
+
       const userInfoResponse = await fetch(userInfoUrl, {
         headers: {
           'Authorization': `Bearer ${tokenResponse.access_token}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'Memos-SSO-Client/1.0'  // GitHub API 要求 User-Agent
         }
       });
 
+      console.log('User info response status:', userInfoResponse.status);
+
       if (!userInfoResponse.ok) {
-        console.error('User info request failed:', await userInfoResponse.text());
-        return errorResponse('Failed to get user information', 401);
+        const errorText = await userInfoResponse.text();
+        console.error('User info request failed with status:', userInfoResponse.status);
+        console.error('Error response:', errorText);
+        // 返回详细的错误信息
+        return errorResponse(`Failed to get user information: ${userInfoResponse.status} - ${errorText.substring(0, 200)}`, 401);
       }
 
       userInfo = await userInfoResponse.json();
+      console.log('User info received:', JSON.stringify(userInfo).substring(0, 200));
+
+      // GitHub特殊处理：如果email为空，尝试从/user/emails获取
+      if (idp.type === 'OAUTH2' && (!userInfo.email || userInfo.email === null)) {
+        console.log('Email not found in user info, checking if GitHub...');
+        // 检查是否是GitHub（通过userInfoUrl判断）
+        if (userInfoUrl.includes('api.github.com')) {
+          console.log('Detected GitHub, fetching emails from /user/emails');
+          try {
+            const emailsResponse = await fetch('https://api.github.com/user/emails', {
+              headers: {
+                'Authorization': `Bearer ${tokenResponse.access_token}`,
+                'Accept': 'application/json',
+                'User-Agent': 'Memos-SSO-Client/1.0'  // GitHub API 要求 User-Agent
+              }
+            });
+            console.log('GitHub emails response status:', emailsResponse.status);
+            if (emailsResponse.ok) {
+              const emails = await emailsResponse.json();
+              console.log('GitHub emails response:', JSON.stringify(emails));
+              // 查找primary email
+              const primaryEmail = emails.find(e => e.primary);
+              if (primaryEmail) {
+                userInfo.email = primaryEmail.email;
+                console.log('Using primary email:', userInfo.email);
+              } else if (emails.length > 0) {
+                userInfo.email = emails[0].email;
+                console.log('Using first email:', userInfo.email);
+              }
+            } else {
+              const emailError = await emailsResponse.text();
+              console.error('Failed to fetch GitHub emails:', emailsResponse.status, emailError);
+            }
+          } catch (emailError) {
+            console.error('Failed to fetch GitHub emails:', emailError);
+            // 继续处理，可能没有email权限
+          }
+        }
+      }
     } catch (error) {
       console.error('Error getting user info:', error);
-      return errorResponse('Failed to get user information from identity provider', 500);
+      console.error('Error stack:', error.stack);
+      // 返回详细的错误信息
+      return errorResponse(`Failed to get user information from identity provider: ${error.message}`, 500);
     }
 
     // 提取标准化的用户信息
-    const email = getUserEmail(idp.type, userInfo);
-    const username = getUserUsername(idp.type, userInfo);
-    const nickname = getUserNickname(idp.type, userInfo);
+    const email = getUserEmail(idp.type, userInfo, oauth2Config);
+    const username = getUserUsername(idp.type, userInfo, oauth2Config);
+    const nickname = getUserNickname(idp.type, userInfo, oauth2Config);
 
-    if (!email) {
-      return errorResponse('Email is required for SSO login', 400);
+    if (!username) {
+      return errorResponse('Username is required for SSO login', 400);
     }
 
     // 检查 identifier_filter（email域名过滤）
-    if (idp.identifier_filter) {
+    if (idp.identifier_filter && email) {
       const allowedDomains = idp.identifier_filter.split(',').map(d => d.trim());
       const emailDomain = email.split('@')[1];
       if (!allowedDomains.includes(emailDomain)) {
@@ -370,28 +447,32 @@ app.post('/signin/sso', async (c) => {
       }
     }
 
-    // 查找或创建用户
+    // 查找或创建用户（根据 username）
     let user;
-    const userStmt = db.prepare('SELECT * FROM users WHERE email = ?');
-    user = await userStmt.bind(email).first();
+    const userStmt = db.prepare('SELECT * FROM users WHERE username = ?');
+    user = await userStmt.bind(username).first();
 
     if (!user) {
       // 创建新用户
       const hashedPassword = await hashPassword(Math.random().toString(36)); // 随机密码，SSO用户不使用
+
       const insertStmt = db.prepare(`
         INSERT INTO users (username, nickname, email, password_hash, is_admin, role)
         VALUES (?, ?, ?, ?, 0, 'user')
       `);
 
       const result = await insertStmt.bind(
-        username || email.split('@')[0],
-        nickname || email.split('@')[0],
-        email,
+        username,
+        nickname || username,
+        email || null,
         hashedPassword
       ).run();
 
       // 重新查询创建的用户
       user = await db.prepare('SELECT * FROM users WHERE id = ?').bind(result.meta.last_row_id).first();
+      console.log('Created new user via SSO:', username);
+    } else {
+      console.log('Found existing user via SSO:', username);
     }
 
     // 转换角色字符串为枚举数字
@@ -425,12 +506,20 @@ app.post('/signin/sso', async (c) => {
     });
   } catch (error) {
     console.error('Error during SSO signin:', error);
-    return errorResponse('SSO login failed', 500);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    // 返回更详细的错误信息以便调试
+    return errorResponse(`SSO login failed: ${error.message}`, 500);
   }
 });
 
 // Helper functions for OAuth2 providers
 function getTokenUrl(type, config) {
+  // 对于 OAUTH2 类型，直接使用config中的tokenUrl
+  if (type === 'OAUTH2') {
+    return config.tokenUrl;
+  }
+
   const urls = {
     'google': 'https://oauth2.googleapis.com/token',
     'github': 'https://github.com/login/oauth/access_token',
@@ -441,6 +530,11 @@ function getTokenUrl(type, config) {
 }
 
 function getUserInfoUrl(type, config) {
+  // 对于 OAUTH2 类型，直接使用config中的userInfoUrl
+  if (type === 'OAUTH2') {
+    return config.userInfoUrl;
+  }
+
   const urls = {
     'google': 'https://www.googleapis.com/oauth2/v2/userinfo',
     'github': 'https://api.github.com/user',
@@ -450,21 +544,54 @@ function getUserInfoUrl(type, config) {
   return urls[type] || config.userInfoUrl;
 }
 
-function getUserEmail(type, userInfo) {
+function getUserEmail(type, userInfo, config) {
+  // 优先使用fieldMapping中配置的email字段
+  if (config.fieldMapping && config.fieldMapping.email) {
+    return userInfo[config.fieldMapping.email];
+  }
+
+  // 对于 OAUTH2 类型，默认使用 email 字段
+  if (type === 'OAUTH2') {
+    return userInfo.email;
+  }
+
+  // 回退到默认逻辑
   if (type === 'google') return userInfo.email;
   if (type === 'github') return userInfo.email;
   if (type === 'gitlab') return userInfo.email;
   return userInfo.email; // OIDC standard
 }
 
-function getUserUsername(type, userInfo) {
+function getUserUsername(type, userInfo, config) {
+  // 优先使用fieldMapping中配置的identifier字段
+  if (config.fieldMapping && config.fieldMapping.identifier) {
+    return userInfo[config.fieldMapping.identifier];
+  }
+
+  // 对于 OAUTH2 类型，尝试多种可能的字段
+  if (type === 'OAUTH2') {
+    return userInfo.login || userInfo.username || userInfo.preferred_username || userInfo.email?.split('@')[0];
+  }
+
+  // 回退到默认逻辑
   if (type === 'google') return userInfo.email?.split('@')[0];
   if (type === 'github') return userInfo.login;
   if (type === 'gitlab') return userInfo.username;
   return userInfo.preferred_username || userInfo.email?.split('@')[0];
 }
 
-function getUserNickname(type, userInfo) {
+function getUserNickname(type, userInfo, config) {
+  // 优先使用fieldMapping中配置的displayName字段
+  if (config.fieldMapping && config.fieldMapping.displayName) {
+    return userInfo[config.fieldMapping.displayName];
+  }
+
+  // 对于 OAUTH2 类型，尝试多种可能的字段
+  if (type === 'OAUTH2') {
+    return userInfo.name || userInfo.display_name || userInfo.nickname || userInfo.login || userInfo.username;
+  }
+
+  // 回退到默认逻辑
   if (type === 'google') return userInfo.name;
   if (type === 'github') return userInfo.name || userInfo.login;
   if (type === 'gitlab') return userInfo.name;

@@ -111,8 +111,8 @@ app.post('/', async (c) => {
       return errorResponse('Name and type are required');
     }
 
-    // 验证类型
-    const validTypes = ['google', 'github', 'gitlab', 'oidc'];
+    // 验证类型 - 兼容前端的 "OAUTH2" 格式
+    const validTypes = ['google', 'github', 'gitlab', 'oidc', 'OAUTH2'];
     if (!validTypes.includes(body.type)) {
       return errorResponse(`Invalid type. Must be one of: ${validTypes.join(', ')}`);
     }
@@ -122,14 +122,22 @@ app.post('/', async (c) => {
       return errorResponse('Config is required and must be an object');
     }
 
+    // 提取实际的配置对象（兼容前端的嵌套格式）
+    let actualConfig = body.config;
+    if (body.config.oauth2Config) {
+      // 前端格式：{ oauth2Config: { clientId, clientSecret, ... } }
+      actualConfig = body.config.oauth2Config;
+    }
+
     // 基本配置验证
     const requiredConfigFields = ['clientId', 'clientSecret'];
     for (const field of requiredConfigFields) {
-      if (!body.config[field]) {
+      if (!actualConfig[field]) {
         return errorResponse(`Config must include ${field}`);
       }
     }
 
+    // 保存时使用原始格式（保持前端格式不变）
     const stmt = db.prepare(`
       INSERT INTO identity_providers (name, type, identifier_filter, config)
       VALUES (?, ?, ?, ?)
@@ -183,7 +191,7 @@ app.patch('/:id', async (c) => {
     }
 
     if (body.type !== undefined) {
-      const validTypes = ['google', 'github', 'gitlab', 'oidc'];
+      const validTypes = ['google', 'github', 'gitlab', 'oidc', 'OAUTH2'];
       if (!validTypes.includes(body.type)) {
         return errorResponse(`Invalid type. Must be one of: ${validTypes.join(', ')}`);
       }
@@ -200,6 +208,18 @@ app.patch('/:id', async (c) => {
       if (typeof body.config !== 'object') {
         return errorResponse('Config must be an object');
       }
+
+      // 提取实际的配置对象（兼容前端的嵌套格式）
+      let actualConfig = body.config;
+      if (body.config.oauth2Config) {
+        actualConfig = body.config.oauth2Config;
+      }
+
+      // 验证必填字段（如果提供了clientSecret）
+      if (actualConfig.clientSecret && !actualConfig.clientId) {
+        return errorResponse('Config must include clientId when clientSecret is provided');
+      }
+
       updateFields.push('config = ?');
       updateValues.push(JSON.stringify(body.config));
     }

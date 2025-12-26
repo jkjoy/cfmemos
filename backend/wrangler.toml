@@ -8,11 +8,6 @@ compatibility_date = "2024-01-15"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-# CORS 允许的前端域名（逗号分隔）
-# 本地开发已默认包含 localhost:5173 和 localhost:3000
-# 这里添加生产环境的前端域名
-ALLOWED_ORIGINS = "https://memos.zxd.im"
-
 # 时区配置（IANA 时区数据库格式）
 # 示例: "Asia/Shanghai", "America/New_York", "Europe/London"
 # 留空则使用 UTC

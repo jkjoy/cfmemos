@@ -77,7 +77,9 @@ CREATE TABLE IF NOT EXISTS memo_resources (
 CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
-    created_ts INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+    creator_id INTEGER,  -- 标签创建者ID
+    created_ts INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- 备忘录与标签关联表
@@ -159,6 +161,7 @@ CREATE INDEX IF NOT EXISTS idx_memo_resources_memo_id ON memo_resources(memo_id)
 CREATE INDEX IF NOT EXISTS idx_memo_resources_resource_id ON memo_resources(resource_id);
 -- 添加标签索引
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+CREATE INDEX IF NOT EXISTS idx_tags_creator_id ON tags(creator_id);
 CREATE INDEX IF NOT EXISTS idx_memo_tags_memo_id ON memo_tags(memo_id);
 CREATE INDEX IF NOT EXISTS idx_memo_tags_tag_id ON memo_tags(tag_id);
 -- 添加memo关系索引
