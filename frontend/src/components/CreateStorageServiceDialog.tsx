@@ -42,7 +42,7 @@ const CreateStorageServiceDialog: React.FC<Props> = (props: Props) => {
         setS3Config(storage.config.s3Config);
       }
     }
-  }, []);
+  }, [storage]);
 
   const handleCloseBtnClick = () => {
     destroy();

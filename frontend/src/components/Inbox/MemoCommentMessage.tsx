@@ -78,7 +78,7 @@ const MemoCommentMessage = ({ inbox }: Props) => {
         )}
       >
         <div className="w-full flex flex-row justify-between items-center">
-          <span className="text-xs text-gray-500">{inbox.createTime?.toLocaleString()}</span>
+          <span className="text-xs text-gray-500">{inbox.createTime ? new Date(inbox.createTime).toLocaleString() : ""}</span>
           <div>
             {inbox.status === Inbox_Status.UNREAD && (
               <Tooltip title={t("common.archive")} placement="top">

@@ -15,9 +15,12 @@ export default function Explore() {
   const { t } = useTranslation();
 
   // Fetch public memos
-  const { data: memos = [], isLoading, error } = useQuery({
+  const { data: memos = [], isLoading, error } = useQuery<MemoType[]>({
     queryKey: ["memos", "explore"],
-    queryFn: () => memoAPI.list({ limit: 100, visibility: "PUBLIC" }),
+    queryFn: async () => {
+      const response = await memoAPI.list({ limit: 100, visibility: "PUBLIC" });
+      return Array.isArray(response) ? response : [];
+    },
   });
 
   // Sort by created time (newest first)

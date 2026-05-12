@@ -91,9 +91,9 @@ const SignIn = () => {
 
   const handleSignInWithIdentityProvider = async (identityProvider: IdentityProvider) => {
     const stateQueryParameter = `auth.signin.${identityProvider.name}-${identityProvider.id}`;
-    if (identityProvider.type === "OAUTH2") {
+    const oauth2Config = identityProvider.config.oauth2Config;
+    if (identityProvider.type === "OAUTH2" && oauth2Config) {
       const redirectUri = absolutifyLink("/auth/callback");
-      const oauth2Config = identityProvider.config.oauth2Config;
       const authUrl = `${oauth2Config.authUrl}?client_id=${
         oauth2Config.clientId
       }&redirect_uri=${redirectUri}&state=${stateQueryParameter}&response_type=code&scope=${encodeURIComponent(

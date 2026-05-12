@@ -43,20 +43,21 @@ const Memo: React.FC<Props> = (props: Props) => {
   const dispatch = useAppDispatch();
   const filterStore = useFilterStore();
   const memoStore = useMemoStore();
-  const userV1Store = useUserV1Store();
+  const getUserByUsername = useUserV1Store((state) => state.getUserByUsername);
+  const getOrFetchUserByUsername = useUserV1Store((state) => state.getOrFetchUserByUsername);
   const user = useCurrentUser();
   const [shouldRender, setShouldRender] = useState<boolean>(lazyRendering ? false : true);
   const [displayTime, setDisplayTime] = useState<string>(getRelativeTimeString(memo.displayTs));
   const memoContainerRef = useRef<HTMLDivElement>(null);
-  const openDetailTimerRef = useRef<number>();
+  const openDetailTimerRef = useRef<number | null>(null);
   const readonly = memo.creatorUsername !== extractUsernameFromName(user?.name);
-  const [creator, setCreator] = useState(userV1Store.getUserByUsername(memo.creatorUsername));
+  const [creator, setCreator] = useState(() => getUserByUsername(memo.creatorUsername));
   const referenceRelations = memo.relationList.filter((relation) => relation.type === "REFERENCE");
 
   const clearOpenDetailTimer = () => {
     if (openDetailTimerRef.current) {
       window.clearTimeout(openDetailTimerRef.current);
-      openDetailTimerRef.current = undefined;
+      openDetailTimerRef.current = null;
     }
   };
 
@@ -79,12 +80,12 @@ const Memo: React.FC<Props> = (props: Props) => {
     if (creator) return;
 
     const fn = async () => {
-      const user = await userV1Store.getOrFetchUserByUsername(memo.creatorUsername);
+      const user = await getOrFetchUserByUsername(memo.creatorUsername);
       setCreator(user);
     };
 
     fn();
-  }, [memo.creatorUsername]);
+  }, [creator, getOrFetchUserByUsername, memo.creatorUsername]);
 
   useEffect(() => {
     return () => {
@@ -104,7 +105,7 @@ const Memo: React.FC<Props> = (props: Props) => {
     return () => {
       clearInterval(intervalFlag);
     };
-  }, [i18n.language]);
+  }, [i18n.language, memo.displayTs]);
 
   // Lazy rendering.
   useEffect(() => {
@@ -120,7 +121,7 @@ const Memo: React.FC<Props> = (props: Props) => {
     observer.observe(memoContainerRef.current);
 
     return () => observer.disconnect();
-  }, [lazyRendering, filterStore.state]);
+  }, [lazyRendering, filterStore.state, shouldRender]);
 
   if (!shouldRender) {
     // Render a placeholder to occupy the space.
@@ -139,7 +140,7 @@ const Memo: React.FC<Props> = (props: Props) => {
       } else {
         await memoStore.pinMemo(memo.id);
       }
-    } catch (error) {
+    } catch {
       // do nth
     }
   };
@@ -276,7 +277,7 @@ const Memo: React.FC<Props> = (props: Props) => {
     clearOpenDetailTimer();
     openDetailTimerRef.current = window.setTimeout(() => {
       openMemoDetail(event.altKey);
-      openDetailTimerRef.current = undefined;
+      openDetailTimerRef.current = null;
     }, 180);
   };
 

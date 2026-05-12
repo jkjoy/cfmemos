@@ -1,5 +1,8 @@
 import apiClient from './client';
 
+type MemoApiParams = Record<string, string | number | boolean | undefined>;
+type MemoApiPayload = Record<string, unknown>;
+
 /**
  * 备忘录 API
  */
@@ -13,7 +16,7 @@ export const memoAPI = {
    * @param {string} params.tag - 标签过滤
    * @param {string} params.visibility - 可见性过滤
    */
-  list: (params = {}) => {
+  list: (params: MemoApiParams = {}) => {
     return apiClient.get('/memo', { params });
   },
 
@@ -21,7 +24,7 @@ export const memoAPI = {
    * 获取备忘录详情
    * @param {string|number} id - 备忘录 ID
    */
-  get: (id) => {
+  get: (id: string | number) => {
     return apiClient.get(`/memo/${id}`);
   },
 
@@ -29,7 +32,7 @@ export const memoAPI = {
    * 获取备忘录详情 (别名)
    * @param {string|number} id - 备忘录 ID
    */
-  getById: (id) => {
+  getById: (id: string | number) => {
     return apiClient.get(`/memo/${id}`);
   },
 
@@ -39,7 +42,7 @@ export const memoAPI = {
    * @param {string} data.content - 内容
    * @param {string} data.visibility - 可见性 (PUBLIC/PRIVATE/PROTECTED)
    */
-  create: (data) => {
+  create: (data: MemoApiPayload) => {
     return apiClient.post('/memo', data);
   },
 
@@ -48,7 +51,7 @@ export const memoAPI = {
    * @param {string|number} id - 备忘录 ID
    * @param {Object} data - 更新数据
    */
-  update: (id, data) => {
+  update: (id: string | number, data: MemoApiPayload) => {
     return apiClient.put(`/memo/${id}`, data);
   },
 
@@ -57,7 +60,7 @@ export const memoAPI = {
    * @param {string|number} id - 备忘录 ID
    * @param {Object} data - 更新数据
    */
-  patch: (id, data) => {
+  patch: (id: string | number, data: MemoApiPayload) => {
     return apiClient.patch(`/memo/${id}`, data);
   },
 
@@ -65,7 +68,7 @@ export const memoAPI = {
    * 删除备忘录
    * @param {string|number} id - 备忘录 ID
    */
-  delete: (id) => {
+  delete: (id: string | number) => {
     return apiClient.delete(`/memo/${id}`);
   },
 
@@ -73,7 +76,7 @@ export const memoAPI = {
    * 搜索备忘录
    * @param {string} query - 搜索关键词
    */
-  search: (query) => {
+  search: (query: string) => {
     return apiClient.get('/memo/search', { params: { query } });
   },
 
@@ -97,7 +100,7 @@ export const memoAPI = {
    * @param {boolean} pinned - 是否置顶
    * @returns {Promise<Object>} 更新结果
    */
-  togglePin: (id, pinned) => {
+  togglePin: (id: string | number, pinned: boolean) => {
     return apiClient.post(`/memo/${id}/organizer`, { pinned });
   }
 };

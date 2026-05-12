@@ -1,9 +1,8 @@
-import { Button, Divider, Input, Switch, Textarea, Tooltip } from "@mui/joy";
+import { Button, Divider, Input, Switch, Textarea } from "@mui/joy";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import * as api from "@/helpers/api";
-import { formatBytes } from "@/helpers/utils";
 import { useGlobalStore, useMemoStore } from "@/store/module";
 import { useTranslate } from "@/utils/i18n";
 import { showCommonDialog } from "../Dialog/CommonDialog";
@@ -39,7 +38,7 @@ const SystemSection = () => {
 
   useEffect(() => {
     globalStore.fetchSystemStatus();
-  }, []);
+  }, [globalStore]);
 
   useEffect(() => {
     api.getSystemSetting().then(({ data: systemSettings }) => {
@@ -55,15 +54,15 @@ const SystemSection = () => {
   }, []);
 
   useEffect(() => {
-    setState({
-      ...state,
+    setState((prevState) => ({
+      ...prevState,
       allowSignUp: systemStatus.allowSignUp,
       disablePasswordLogin: systemStatus.disablePasswordLogin,
       additionalStyle: systemStatus.additionalStyle,
       additionalScript: systemStatus.additionalScript,
       disablePublicMemos: systemStatus.disablePublicMemos,
       memoDisplayWithUpdatedTs: systemStatus.memoDisplayWithUpdatedTs,
-    });
+    }));
   }, [systemStatus]);
 
   const handleAllowSignUpChanged = async (value: boolean) => {

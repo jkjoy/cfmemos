@@ -77,10 +77,11 @@ export default function Login() {
       case "github":
         authUrl = `https://github.com/login/oauth/authorize?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${state}`;
         break;
-      case "gitlab":
+      case "gitlab": {
         const instanceUrl = config.instanceUrl || "https://gitlab.com";
         authUrl = `${instanceUrl}/oauth/authorize?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20profile%20email&state=${state}`;
         break;
+      }
       case "oidc":
         authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20profile%20email&state=${state}`;
         break;

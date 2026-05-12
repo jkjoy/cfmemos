@@ -45,4 +45,8 @@ interface MemoFind {
   visibility?: Visibility;
   offset?: number;
   limit?: number;
+  text?: string;
+  tag?: string;
+  dateFrom?: number;
+  dateTo?: number;
 }

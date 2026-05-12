@@ -14,7 +14,7 @@ const App = () => {
   const navigateTo = useNavigateTo();
   const globalStore = useGlobalStore();
   const { mode, setMode } = useColorScheme();
-  const userV1Store = useUserV1Store();
+  const fetchCurrentUser = useUserV1Store((state) => state.fetchCurrentUser);
   const [loading, setLoading] = useState(true);
   const { appearance, locale, systemStatus } = globalStore.state;
 
@@ -23,20 +23,20 @@ const App = () => {
     if (!systemStatus.host) {
       navigateTo("/auth/signup");
     }
-  }, [systemStatus.host]);
+  }, [navigateTo, systemStatus.host]);
 
   useEffect(() => {
     const initialState = async () => {
       try {
-        await userV1Store.fetchCurrentUser();
-      } catch (error) {
+        await fetchCurrentUser();
+      } catch {
         // Skip.
       }
       setLoading(false);
     };
 
     initialState();
-  }, []);
+  }, [fetchCurrentUser]);
 
   useEffect(() => {
     const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -56,7 +56,7 @@ const App = () => {
     } catch (error) {
       console.error("failed to initial color scheme listener", error);
     }
-  }, []);
+  }, [globalStore, setMode]);
 
   useEffect(() => {
     if (systemStatus.additionalStyle) {
@@ -93,7 +93,7 @@ const App = () => {
     } else {
       document.documentElement.setAttribute("dir", "ltr");
     }
-  }, [locale]);
+  }, [i18n, locale]);
 
   useEffect(() => {
     storage.set({
@@ -106,7 +106,7 @@ const App = () => {
     }
 
     setMode(currentAppearance);
-  }, [appearance]);
+  }, [appearance, setMode]);
 
   useEffect(() => {
     const root = document.documentElement;

@@ -96,6 +96,7 @@
     "fetching-data": "Fetching data…",
     "fetch-more": "Click here to fetch more",
     "archived-at": "Archived at",
+    "archived-successfully": "Memo archived successfully",
     "search-placeholder": "Search memos",
     "visibility": {
       "private": "Private",

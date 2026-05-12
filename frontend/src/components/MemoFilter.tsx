@@ -15,7 +15,7 @@ const MemoFilter = () => {
 
   useEffect(() => {
     filterStore.clearFilter();
-  }, [location]);
+  }, [filterStore, location]);
 
   return (
     <div

@@ -17,11 +17,11 @@ const TagSelector = (props: Props) => {
     (async () => {
       try {
         await tagStore.fetchTags();
-      } catch (error) {
+      } catch {
         // do nothing.
       }
     })();
-  }, []);
+  }, [tagStore]);
 
   return (
     <IconButton className="relative group flex flex-row justify-center items-center p-1 w-auto h-auto mr-1 select-none rounded cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-zinc-800 hover:shadow">

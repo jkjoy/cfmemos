@@ -9,7 +9,7 @@ interface Props {
 
 const RelationListView = (props: Props) => {
   const { relationList, setRelationList } = props;
-  const memoCacheStore = useMemoCacheStore();
+  const getOrFetchMemoById = useMemoCacheStore((state) => state.getOrFetchMemoById);
   const [referencingMemoList, setReferencingMemoList] = useState<Memo[]>([]);
 
   useEffect(() => {
@@ -17,12 +17,12 @@ const RelationListView = (props: Props) => {
       const requests = relationList
         .filter((relation) => relation.type === "REFERENCE")
         .map(async (relation) => {
-          return await memoCacheStore.getOrFetchMemoById(relation.relatedMemoId);
+          return await getOrFetchMemoById(relation.relatedMemoId);
         });
       const list = await Promise.all(requests);
       setReferencingMemoList(list);
     })();
-  }, [relationList]);
+  }, [getOrFetchMemoById, relationList]);
 
   const handleDeleteRelation = async (memo: Memo) => {
     setRelationList(relationList.filter((relation) => relation.relatedMemoId !== memo.id));

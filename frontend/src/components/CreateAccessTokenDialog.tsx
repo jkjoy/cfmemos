@@ -71,14 +71,14 @@ const CreateAccessTokenDialog: React.FC<Props> = (props: Props) => {
       await userServiceClient.createUserAccessToken({
         name: currentUser.name,
         description: state.description,
-        expiresAt: state.expiration ? new Date(Date.now() + state.expiration * 1000) : undefined,
+        expiresAt: state.expiration ? new Date(Date.now() + state.expiration * 1000).toISOString() : undefined,
       });
 
       onConfirm();
       destroy();
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response.data.message);
+      toast.error(error.message || "Failed to create access token");
     }
   };
 

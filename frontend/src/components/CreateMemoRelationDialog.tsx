@@ -50,7 +50,7 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
       setMemoList(unionBy([memo, ...memoList], "id"));
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response.data.message);
+      toast.error(error.message || "Failed to fetch memo");
     }
   };
 

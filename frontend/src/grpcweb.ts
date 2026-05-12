@@ -3,7 +3,11 @@
  * 将前端的 gRPC-Web 调用转换为 REST API 调用
  */
 
-import { User } from "@/types/proto/api/v2/user_service";
+import type { Activity } from "@/types/proto/api/v2/activity_service";
+import type { Memo as ProtoMemo } from "@/types/proto/api/v2/memo_service";
+import type { Resource, UpdateResourceRequest } from "@/types/proto/api/v2/resource_service";
+import { User, UserAccessToken } from "@/types/proto/api/v2/user_service";
+import type { Webhook } from "@/types/proto/api/v2/webhook_service";
 
 // API 基础 URL - 在开发环境中代理到后端
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -134,11 +138,13 @@ export const userServiceClient = {
     }
 
     // 转换字段名和时间格式
-    const user = {
+    const user = User.fromPartial({
       ...rawUser,
+      name: rawUser.name || `users/${rawUser.username}`,
+      createdTime: rawUser.created_ts ? new Date(rawUser.created_ts * 1000).toISOString() : new Date().toISOString(),
       createTime: rawUser.created_ts ? new Date(rawUser.created_ts * 1000).toISOString() : new Date().toISOString(),
-      updateTime: rawUser.created_ts ? new Date(rawUser.created_ts * 1000).toISOString() : new Date().toISOString(),
-    };
+      updatedTime: rawUser.updated_ts ? new Date(rawUser.updated_ts * 1000).toISOString() : new Date().toISOString(),
+    });
 
     return { user };
   },
@@ -188,7 +194,7 @@ export const userServiceClient = {
       }
     }
 
-    const updatedUser = await request('PATCH', `/api/v1/user/${existingUser.id}`, updateData);
+    const updatedUser = User.fromPartial(await request<any>('PATCH', `/api/v1/user/${existingUser.id}`, updateData));
 
     return { user: updatedUser };
   },
@@ -221,13 +227,13 @@ export const userServiceClient = {
       roleString = roleMap[req.user.role] || 'user';
     }
 
-    const user = await request('POST', '/api/v1/user', {
+    const user = User.fromPartial(await request<any>('POST', '/api/v1/user', {
       username: username,
       password: req.user.password,
       nickname: req.user.nickname || username, // 如果没有 nickname，使用 username 作为默认值
       email: req.user.email || '',
       role: roleString,
-    });
+    }));
 
     return { user };
   },
@@ -252,7 +258,7 @@ export const userServiceClient = {
     try {
       const data = await request<any>('GET', '/api/v1/user/setting');
       return { setting: data };
-    } catch (error) {
+    } catch {
       // 如果获取失败,返回默认设置
       return {
         setting: {
@@ -279,7 +285,14 @@ export const userServiceClient = {
     try {
       const username = req.name.replace('users/', '');
       const response = await request<any[]>('GET', `/api/v1/user/${username}/access-tokens`);
-      return { accessTokens: response || [] };
+      const accessTokens = (response || []).map((token) =>
+        ({
+          ...token,
+          issuedAt: token.issuedAt ?? undefined,
+          expiresAt: token.expiresAt ?? undefined,
+        }) as UserAccessToken
+      );
+      return { accessTokens };
     } catch (error) {
       console.error('listUserAccessTokens error:', error);
       return { accessTokens: [] };
@@ -316,7 +329,7 @@ export const userServiceClient = {
 
 export const memoServiceClient = {
   async createMemo(req: { content: string; visibility?: string; resourceIdList?: number[]; relationList?: any[] }) {
-    const memo = await request('POST', '/api/v1/memo', {
+    const memo = await request<ProtoMemo>('POST', '/api/v1/memo', {
       content: req.content,
       visibility: req.visibility || 'PRIVATE',
       resourceIdList: req.resourceIdList || [],
@@ -336,15 +349,14 @@ export const memoServiceClient = {
 
     const queryString = params.toString();
     const path = `/api/v1/memo${queryString ? `?${queryString}` : ''}`;
-    const memos = await request<any[]>('GET', path);
+    const memos = await request<ProtoMemo[]>('GET', path);
 
     return { memos };
   },
 
-  async getMemo(req: { name: string }) {
-    const parts = req.name.split('/');
-    const memoId = parts[parts.length - 1];
-    const memo = await request('GET', `/api/v1/memo/${memoId}`);
+  async getMemo(req: { name?: string; id?: number }) {
+    const memoId = req.id ?? req.name?.split('/').pop();
+    const memo = await request<ProtoMemo>('GET', `/api/v1/memo/${memoId}`);
     return { memo };
   },
 
@@ -353,7 +365,7 @@ export const memoServiceClient = {
     const parts = memo.name?.split('/') || [];
     const memoId = parts[parts.length - 1] || memo.id;
 
-    const updatedMemo = await request('PATCH', `/api/v1/memo/${memoId}`, {
+    const updatedMemo = await request<ProtoMemo>('PATCH', `/api/v1/memo/${memoId}`, {
       content: memo.content,
       visibility: memo.visibility,
       rowStatus: memo.rowStatus,
@@ -380,26 +392,28 @@ export const resourceServiceClient = {
     const formData = new FormData();
 
     if (req.content) {
-      const blob = new Blob([req.content], { type: req.type || 'application/octet-stream' });
+      const blob = new Blob([new Uint8Array(req.content)], {
+        type: req.type || 'application/octet-stream',
+      });
       formData.append('file', blob, req.filename);
     } else if (req.externalLink) {
       formData.append('externalLink', req.externalLink);
     }
 
-    const resource = await request('POST', '/api/v1/resource', formData);
+    const resource = await request<Resource>('POST', '/api/v1/resource', formData);
     return { resource };
   },
 
   async listResources(_request: any = {}) {
-    const resources = await request<any[]>('GET', '/api/v1/resource');
+    const resources = await request<Resource[]>('GET', '/api/v1/resource');
     return { resources };
   },
 
-  async updateResource(req: { resource: any; updateMask: string[] }) {
+  async updateResource(req: UpdateResourceRequest) {
     const resource = req.resource;
     const resourceId = resource.id;
 
-    const updatedResource = await request('PATCH', `/api/v1/resource/${resourceId}`, {
+    const updatedResource = await request<Resource>('PATCH', `/api/v1/resource/${resourceId}`, {
       filename: resource.filename,
       memoId: resource.memoId,
     });
@@ -407,9 +421,8 @@ export const resourceServiceClient = {
     return { resource: updatedResource };
   },
 
-  async deleteResource(req: { name: string }) {
-    const parts = req.name.split('/');
-    const resourceId = parts[parts.length - 1];
+  async deleteResource(req: { name?: string; id?: number }) {
+    const resourceId = req.id ?? req.name?.split('/').pop();
     await request('DELETE', `/api/v1/resource/${resourceId}`);
     return {};
   },
@@ -419,7 +432,7 @@ export const resourceServiceClient = {
 
 export const systemServiceClient = {
   async getSystemInfo(_request: any = {}) {
-    const data = await request('GET', '/api/v1/status');
+    const data = await request<SystemStatus>('GET', '/api/v1/status');
     return { systemInfo: data };
   },
 
@@ -449,14 +462,9 @@ export const tagServiceClient = {
     return {};
   },
 
-  async getTagSuggestions(req: { user?: string } = {}) {
-    try {
-      // 暂时返回空数组，后续实现后端 API
-      return { tags: [] };
-    } catch (error) {
-      console.error('getTagSuggestions error:', error);
-      return { tags: [] };
-    }
+  async getTagSuggestions(_request: { user?: string } = {}) {
+    // 暂时返回空数组，后续实现后端 API
+    return { tags: [] };
   },
 };
 
@@ -480,17 +488,17 @@ export const inboxServiceClient = {
 // ============ Activity 服务 (ActivityService) ============
 
 export const activityServiceClient = {
-  async getActivity(_request: { name: string }) {
-    return { activity: {} };
+  async getActivity(_request: { name?: string; id?: number }) {
+    return { activity: {} as Activity };
   },
 };
 
 // ============ Webhook 服务 (WebhookService) ============
 
 export const webhookServiceClient = {
-  async listWebhooks(req: { creatorId?: number } = {}) {
+  async listWebhooks(_request: { creatorId?: number } = {}) {
     try {
-      const webhooks = await request<any[]>('GET', '/api/v1/webhook');
+      const webhooks = await request<Webhook[]>('GET', '/api/v1/webhook');
       return { webhooks };
     } catch (error) {
       console.error('listWebhooks error:', error);
@@ -500,7 +508,7 @@ export const webhookServiceClient = {
 
   async getWebhook(req: { id: number }) {
     try {
-      const webhook = await request('GET', `/api/v1/webhook/${req.id}`);
+      const webhook = await request<Webhook>('GET', `/api/v1/webhook/${req.id}`);
       return { webhook };
     } catch (error) {
       console.error('getWebhook error:', error);
@@ -510,7 +518,7 @@ export const webhookServiceClient = {
 
   async createWebhook(req: { name: string; url: string }) {
     try {
-      const webhook = await request('POST', '/api/v1/webhook', {
+      const webhook = await request<Webhook>('POST', '/api/v1/webhook', {
         name: req.name,
         url: req.url,
       });
@@ -523,7 +531,7 @@ export const webhookServiceClient = {
 
   async updateWebhook(req: { webhook: any; updateMask?: string[] }) {
     try {
-      const webhook = await request('PATCH', `/api/v1/webhook/${req.webhook.id}`, {
+      const webhook = await request<Webhook>('PATCH', `/api/v1/webhook/${req.webhook.id}`, {
         name: req.webhook.name,
         url: req.webhook.url,
       });

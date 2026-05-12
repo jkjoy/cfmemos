@@ -28,7 +28,7 @@ const ChangeMemoCreatedTsDialog: React.FC<Props> = (props: Props) => {
         destroy();
       }
     });
-  }, []);
+  }, [destroy, memoId, memoStore, t]);
 
   const handleCloseBtnClick = () => {
     destroy();

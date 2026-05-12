@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import MemoFilter from "@/components/MemoFilter";
@@ -27,6 +27,17 @@ const MemoList: React.FC = () => {
   const fetchMoreRef = useRef<HTMLSpanElement>(null);
   const [selectedMemoId, setSelectedMemoId] = useState<MemoId | null>(null);
 
+  const searchFilter = useMemo(() => {
+    const nextSearchFilter: { text?: string; tag?: string; dateFrom?: number; dateTo?: number } = {};
+    if (textQuery) nextSearchFilter.text = textQuery;
+    if (tagQuery) nextSearchFilter.tag = tagQuery;
+    if (duration && duration.from < duration.to) {
+      nextSearchFilter.dateFrom = duration.from;
+      nextSearchFilter.dateTo = duration.to;
+    }
+    return nextSearchFilter;
+  }, [duration, tagQuery, textQuery]);
+
   const shownMemos = memos.filter((memo) => memo.creatorUsername === username && memo.rowStatus === "NORMAL");
 
   const pinnedMemos = shownMemos.filter((m) => m.pinned);
@@ -42,37 +53,35 @@ const MemoList: React.FC = () => {
   unpinnedMemos.sort(memoSort);
   const sortedMemos = pinnedMemos.concat(unpinnedMemos).filter((m) => m.rowStatus === "NORMAL");
 
+  const handleFetchMoreClick = useCallback(async () => {
+    try {
+      await memoStore.fetchMemos(username, DEFAULT_MEMO_LIMIT, memos.length, searchFilter);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to fetch more memos");
+    }
+  }, [memoStore, memos.length, searchFilter, username]);
+
   useEffect(() => {
     const root = document.body.querySelector("#root");
     if (root) {
       root.scrollTo(0, 0);
     }
 
-    // 当filter变化时，清除现有memos并重新加载
-    memoStore.clearMemos(); // 清除现有 memos
+    memoStore.clearMemos();
     memoStore.setLoadingStatus("incomplete");
 
     (async () => {
       try {
-        // 准备搜索参数
-        const searchFilter: any = {};
-        if (textQuery) searchFilter.text = textQuery;
-        if (tagQuery) searchFilter.tag = tagQuery;
-        if (duration && duration.from < duration.to) {
-          searchFilter.dateFrom = duration.from;
-          searchFilter.dateTo = duration.to;
-        }
-
         await memoStore.fetchMemos(username, DEFAULT_MEMO_LIMIT, 0, searchFilter);
       } catch (error: any) {
         toast.error(error.response?.data?.message || "Failed to fetch memos");
       }
     })();
-  }, [filter]);
+  }, [memoStore, searchFilter, username]);
 
   useEffect(() => {
     memoStore.setLoadingStatus("incomplete");
-  }, []);
+  }, [memoStore]);
 
   useEffect(() => {
     if (!fetchMoreRef.current) return;
@@ -85,24 +94,7 @@ const MemoList: React.FC = () => {
     observer.observe(fetchMoreRef.current);
 
     return () => observer.disconnect();
-  }, [loadingStatus]);
-
-  const handleFetchMoreClick = async () => {
-    try {
-      // 准备搜索参数
-      const searchFilter: any = {};
-      if (textQuery) searchFilter.text = textQuery;
-      if (tagQuery) searchFilter.tag = tagQuery;
-      if (duration && duration.from < duration.to) {
-        searchFilter.dateFrom = duration.from;
-        searchFilter.dateTo = duration.to;
-      }
-
-      await memoStore.fetchMemos(username, DEFAULT_MEMO_LIMIT, memos.length, searchFilter);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to fetch more memos");
-    }
-  };
+  }, [handleFetchMoreClick, loadingStatus]);
 
   return (
     <div className="flex flex-col justify-start items-start w-full max-w-full overflow-y-scroll pb-28 hide-scrollbar">

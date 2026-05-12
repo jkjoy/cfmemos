@@ -42,7 +42,7 @@ const BaseDialog: React.FC<Props> = (props: Props) => {
       document.body.removeEventListener("keydown", handleKeyDown);
       dialogStore.removeDialog(dialogName);
     };
-  }, []);
+  }, [destroy, dialogName, dialogStore]);
 
   useEffect(() => {
     if (dialogIndex > 0 && dialogContainerRef.current) {

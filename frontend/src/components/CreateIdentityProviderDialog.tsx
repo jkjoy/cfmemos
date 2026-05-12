@@ -128,17 +128,18 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
 
   useEffect(() => {
     if (identityProvider) {
+      const existingOAuth2Config = identityProvider.config.oauth2Config;
       setBasicInfo({
         name: identityProvider.name,
         identifierFilter: identityProvider.identifierFilter,
       });
       setType(identityProvider.type);
-      if (identityProvider.type === "OAUTH2") {
-        setOAuth2Config(identityProvider.config.oauth2Config);
-        setOAuth2Scopes(identityProvider.config.oauth2Config.scopes.join(" "));
+      if (identityProvider.type === "OAUTH2" && existingOAuth2Config) {
+        setOAuth2Config(existingOAuth2Config);
+        setOAuth2Scopes(existingOAuth2Config.scopes.join(" "));
       }
     }
-  }, []);
+  }, [identityProvider]);
 
   useEffect(() => {
     if (!isCreating) {
@@ -147,17 +148,18 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
 
     const template = templateList.find((t) => t.name === selectedTemplate);
     if (template) {
+      const templateOAuth2Config = template.config.oauth2Config;
       setBasicInfo({
         name: template.name,
         identifierFilter: template.identifierFilter,
       });
       setType(template.type);
-      if (template.type === "OAUTH2") {
-        setOAuth2Config(template.config.oauth2Config);
-        setOAuth2Scopes(template.config.oauth2Config.scopes.join(" "));
+      if (template.type === "OAUTH2" && templateOAuth2Config) {
+        setOAuth2Config(templateOAuth2Config);
+        setOAuth2Scopes(templateOAuth2Config.scopes.join(" "));
       }
     }
-  }, [selectedTemplate]);
+  }, [isCreating, selectedTemplate]);
 
   const handleCloseBtnClick = () => {
     destroy();
@@ -218,7 +220,7 @@ const CreateIdentityProviderDialog: React.FC<Props> = (props: Props) => {
       }
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response.data.message);
+      toast.error(error.message || "Failed to save identity provider");
     }
     if (confirmCallback) {
       confirmCallback();

@@ -56,7 +56,7 @@ const DailyReview = () => {
       }
     };
     fetchMoreMemos();
-  }, [selectedDateStamp]);
+  }, [memoStore, selectedDateStamp]);
 
   const handleDataPickerChange = (datestamp: number): void => {
     setSelectedDateStamp(datestamp);

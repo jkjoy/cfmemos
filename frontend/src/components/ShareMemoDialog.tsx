@@ -22,7 +22,8 @@ interface Props extends DialogProps {
 const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const { memo: propsMemo, destroy } = props;
   const t = useTranslate();
-  const userV1Store = useUserV1Store();
+  const getUserByUsername = useUserV1Store((state) => state.getUserByUsername);
+  const getOrFetchUserByUsername = useUserV1Store((state) => state.getOrFetchUserByUsername);
   const downloadingImageState = useLoading(false);
   const loadingState = useLoading();
   const memoElRef = useRef<HTMLDivElement>(null);
@@ -30,14 +31,14 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
     ...propsMemo,
     displayTsStr: getDateTimeString(propsMemo.displayTs),
   };
-  const user = userV1Store.getUserByUsername(memo.creatorUsername);
+  const user = getUserByUsername(memo.creatorUsername);
 
   useEffect(() => {
     (async () => {
-      await userV1Store.getOrFetchUserByUsername(memo.creatorUsername);
+      await getOrFetchUserByUsername(memo.creatorUsername);
       loadingState.setFinish();
     })();
-  }, []);
+  }, [getOrFetchUserByUsername, loadingState, memo.creatorUsername]);
 
   const handleCloseBtnClick = () => {
     destroy();

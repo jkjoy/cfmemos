@@ -12,7 +12,7 @@ import { useTranslate } from "@/utils/i18n";
 const UserProfile = () => {
   const t = useTranslate();
   const params = useParams();
-  const userV1Store = useUserV1Store();
+  const getOrFetchUserByUsername = useUserV1Store((state) => state.getOrFetchUserByUsername);
   const loadingState = useLoading();
   const [user, setUser] = useState<User>();
 
@@ -22,8 +22,7 @@ const UserProfile = () => {
       throw new Error("username is required");
     }
 
-    userV1Store
-      .getOrFetchUserByUsername(username)
+    getOrFetchUserByUsername(username)
       .then((user) => {
         setUser(user);
         loadingState.setFinish();
@@ -32,7 +31,7 @@ const UserProfile = () => {
         console.error(error);
         toast.error(t("message.user-not-found"));
       });
-  }, [params.username]);
+  }, [getOrFetchUserByUsername, loadingState, params.username, t]);
 
   return (
     <>

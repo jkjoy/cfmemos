@@ -24,7 +24,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const initialGlobalStateLoader = async () => {
   try {
     await initialGlobalState();
-  } catch (error) {
+  } catch {
     // do nothing.
   }
   return null;

@@ -33,7 +33,7 @@ const SquareDiv: React.FC<Props> = (props: Props) => {
     return () => {
       window.removeEventListener("resize", adjustSquareSize);
     };
-  }, []);
+  }, [baseSide]);
 
   return (
     <div ref={squareDivRef} className={`${[baseSide === "width" ? "w-full" : "h-full", className ?? ""].join(" ")}`}>

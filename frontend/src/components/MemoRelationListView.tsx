@@ -11,7 +11,7 @@ interface Props {
 
 const MemoRelationListView = (props: Props) => {
   const { memo, relationList } = props;
-  const memoCacheStore = useMemoCacheStore();
+  const getOrFetchMemoById = useMemoCacheStore((state) => state.getOrFetchMemoById);
   const [referencingMemoList, setReferencingMemoList] = useState<Memo[]>([]);
   const [referencedMemoList, setReferencedMemoList] = useState<Memo[]>([]);
 
@@ -20,17 +20,17 @@ const MemoRelationListView = (props: Props) => {
       const referencingMemoList = await Promise.all(
         relationList
           .filter((relation) => relation.memoId === memo.id && relation.relatedMemoId !== memo.id)
-          .map((relation) => memoCacheStore.getOrFetchMemoById(relation.relatedMemoId))
+          .map((relation) => getOrFetchMemoById(relation.relatedMemoId))
       );
       setReferencingMemoList(referencingMemoList);
       const referencedMemoList = await Promise.all(
         relationList
           .filter((relation) => relation.memoId !== memo.id && relation.relatedMemoId === memo.id)
-          .map((relation) => memoCacheStore.getOrFetchMemoById(relation.memoId))
+          .map((relation) => getOrFetchMemoById(relation.memoId))
       );
       setReferencedMemoList(referencedMemoList);
     })();
-  }, [memo, relationList]);
+  }, [getOrFetchMemoById, memo, relationList]);
 
   return (
     <>

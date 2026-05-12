@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { omit } from "lodash-es";
 import * as api from "@/helpers/api";
 import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
@@ -16,18 +17,40 @@ export const convertResponseModelMemo = (memo: Memo): Memo => {
 
 export const useMemoStore = () => {
   const state = useAppSelector((state) => state.memo);
-  const memoCacheStore = useMemoCacheStore();
+  const setMemoCache = useMemoCacheStore((memoCacheStore) => memoCacheStore.setMemoCache);
+  const deleteMemoCache = useMemoCacheStore((memoCacheStore) => memoCacheStore.deleteMemoCache);
+  const stateRef = useRef(state);
+  const apiRef = useRef<ReturnType<typeof buildMemoStoreApi> | null>(null);
 
+  stateRef.current = state;
+
+  if (!apiRef.current) {
+    apiRef.current = buildMemoStoreApi(stateRef, { setMemoCache, deleteMemoCache });
+  }
+
+  return apiRef.current!;
+};
+
+const buildMemoStoreApi = (
+  stateRef: React.MutableRefObject<ReturnType<typeof store.getState>["memo"]>,
+  memoCacheStore: {
+    setMemoCache: (memo: Memo) => void;
+    deleteMemoCache: (memoId: MemoId) => void;
+  }
+) => {
   const fetchMemoById = async (memoId: MemoId) => {
     const { data } = await api.getMemoById(memoId);
     const memo = convertResponseModelMemo(data);
     store.dispatch(upsertMemos([memo]));
+    memoCacheStore.setMemoCache(memo);
 
     return memo;
   };
 
   return {
-    state,
+    get state() {
+      return stateRef.current;
+    },
     getState: () => {
       return store.getState().memo;
     },
@@ -40,7 +63,6 @@ export const useMemoStore = () => {
       if (username) {
         memoFind.creatorUsername = username;
       }
-      // 添加搜索过滤器
       if (filter?.text) {
         memoFind.text = filter.text;
       }
@@ -48,10 +70,10 @@ export const useMemoStore = () => {
         memoFind.tag = filter.tag;
       }
       if (filter?.dateFrom) {
-        memoFind.dateFrom = Math.floor(filter.dateFrom / 1000); // 转换为秒级时间戳
+        memoFind.dateFrom = Math.floor(filter.dateFrom / 1000);
       }
       if (filter?.dateTo) {
-        memoFind.dateTo = Math.floor(filter.dateTo / 1000); // 转换为秒级时间戳
+        memoFind.dateTo = Math.floor(filter.dateTo / 1000);
       }
 
       store.dispatch(updateLoadingStatus("fetching"));
@@ -90,9 +112,7 @@ export const useMemoStore = () => {
         rowStatus: "ARCHIVED",
       };
       const { data } = await api.getMemoList(memoFind);
-      const archivedMemos = data.map((m) => {
-        return convertResponseModelMemo(m);
-      });
+      const archivedMemos = data.map((m) => convertResponseModelMemo(m));
       return archivedMemos;
     },
     setLoadingStatus: (status: LoadingStatus) => {
@@ -100,7 +120,7 @@ export const useMemoStore = () => {
     },
     fetchMemoById,
     getMemoById: async (memoId: MemoId) => {
-      for (const m of state.memos) {
+      for (const m of stateRef.current.memos) {
         if (m.id === memoId) {
           return m;
         }
@@ -110,17 +130,17 @@ export const useMemoStore = () => {
     },
     getLinkedMemos: async (memoId: MemoId): Promise<Memo[]> => {
       const regex = new RegExp(`[@(.+?)](${memoId})`);
-      return state.memos.filter((m) => m.content.match(regex));
+      return stateRef.current.memos.filter((m) => m.content.match(regex));
     },
-    createMemo: async (memoCreate: MemoCreate) => {
-      const { data } = await api.createMemo(memoCreate);
+    createMemo: async (memoCreateValue: MemoCreate) => {
+      const { data } = await api.createMemo(memoCreateValue);
       const memo = convertResponseModelMemo(data);
       store.dispatch(createMemo(memo));
       memoCacheStore.setMemoCache(memo);
       return memo;
     },
-    patchMemo: async (memoPatch: MemoPatch): Promise<Memo> => {
-      const { data } = await api.patchMemo(memoPatch);
+    patchMemo: async (memoPatchValue: MemoPatch): Promise<Memo> => {
+      const { data } = await api.patchMemo(memoPatchValue);
       const memo = convertResponseModelMemo(data);
       store.dispatch(patchMemo(omit(memo, "pinned")));
       memoCacheStore.setMemoCache(memo);

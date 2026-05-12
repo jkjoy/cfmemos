@@ -16,6 +16,7 @@ interface SystemStatus {
   host?: User;
   profile: Profile;
   dbSize: number;
+  timezone?: string;
   // System settings
   allowSignUp: boolean;
   disablePasswordLogin: boolean;

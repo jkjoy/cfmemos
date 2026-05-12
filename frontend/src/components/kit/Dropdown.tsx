@@ -27,7 +27,7 @@ const Dropdown: React.FC<Props> = (props: Props) => {
         once: true,
       });
     }
-  }, [dropdownStatus]);
+  }, [dropdownStatus, toggleDropdownStatus]);
 
   return (
     <div

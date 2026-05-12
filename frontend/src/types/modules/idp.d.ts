@@ -1,6 +1,6 @@
 type IdentityProviderId = number;
 
-type IdentityProviderType = "OAUTH2";
+type IdentityProviderType = "OAUTH2" | "google" | "github" | "gitlab" | "oidc";
 
 interface FieldMapping {
   identifier: string;
@@ -16,10 +16,21 @@ interface IdentityProviderOAuth2Config {
   userInfoUrl: string;
   scopes: string[];
   fieldMapping: FieldMapping;
+  instanceUrl?: string;
+  provider?: string;
 }
 
 interface IdentityProviderConfig {
-  oauth2Config: IdentityProviderOAuth2Config;
+  oauth2Config?: IdentityProviderOAuth2Config;
+  clientId?: string;
+  clientSecret?: string;
+  authUrl?: string;
+  tokenUrl?: string;
+  userInfoUrl?: string;
+  scopes?: string[];
+  fieldMapping?: FieldMapping;
+  instanceUrl?: string;
+  provider?: string;
 }
 
 interface IdentityProvider {

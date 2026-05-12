@@ -25,7 +25,7 @@ const WebhookSection = () => {
     listWebhooks(currentUser.id).then((webhooks) => {
       setWebhooks(webhooks);
     });
-  }, []);
+  }, [currentUser.id]);
 
   const handleCreateAccessTokenDialogConfirm = async () => {
     const webhooks = await listWebhooks(currentUser.id);

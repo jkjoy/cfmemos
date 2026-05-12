@@ -1,10 +1,11 @@
 import { matcher } from "./matcher";
 import { blockElementParserList, inlineElementParserList, TAG_REG } from "./parser";
+import type { ReactNode } from "react";
 
 type Parser = {
   name: string;
   regexp: RegExp;
-  renderer: (rawStr: string) => JSX.Element | string;
+  renderer: (rawStr: string) => ReactNode;
 };
 
 const findMatchingParser = (parsers: Parser[], markdownStr: string): Parser | undefined => {
@@ -35,7 +36,7 @@ export const marked = (
   markdownStr: string,
   blockParsers = blockElementParserList,
   inlineParsers = inlineElementParserList
-): string | JSX.Element => {
+): ReactNode => {
   const matchedBlockParser = findMatchingParser(blockParsers, markdownStr);
   if (matchedBlockParser) {
     const matchResult = matcher(markdownStr, matchedBlockParser.regexp);

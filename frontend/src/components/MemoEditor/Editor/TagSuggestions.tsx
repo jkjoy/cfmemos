@@ -1,12 +1,12 @@
 import classNames from "classnames";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import getCaretCoordinates from "textarea-caret";
 import OverflowTip from "@/components/kit/OverflowTip";
 import { useTagStore } from "@/store/module";
 import { EditorRefActions } from ".";
 
 type Props = {
-  editorRef: React.RefObject<HTMLTextAreaElement>;
+  editorRef: React.RefObject<HTMLTextAreaElement | null>;
   editorActions: React.ForwardedRef<EditorRefActions>;
 };
 
@@ -14,7 +14,7 @@ type Position = { left: number; top: number; height: number };
 
 const TagSuggestions = ({ editorRef, editorActions }: Props) => {
   const [position, setPosition] = useState<Position | null>(null);
-  const hide = () => setPosition(null);
+  const hide = useCallback(() => setPosition(null), []);
 
   const { state } = useTagStore();
   const tagsRef = useRef(state.tags);
@@ -24,14 +24,14 @@ const TagSuggestions = ({ editorRef, editorActions }: Props) => {
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
 
-  const getCurrentWord = (): [word: string, startIndex: number] => {
+  const getCurrentWord = useCallback((): [word: string, startIndex: number] => {
     const editor = editorRef.current;
     if (!editor) return ["", 0];
     const cursorPos = editor.selectionEnd;
     const before = editor.value.slice(0, cursorPos).match(/\S*$/) || { 0: "", index: cursorPos };
     const after = editor.value.slice(cursorPos).match(/^\S*/) || { 0: "" };
     return [before[0] + after[0], before.index ?? cursorPos];
-  };
+  }, [editorRef]);
 
   const suggestionsRef = useRef<string[]>([]);
   suggestionsRef.current = (() => {
@@ -61,15 +61,15 @@ const TagSuggestions = ({ editorRef, editorActions }: Props) => {
   const isVisibleRef = useRef(false);
   isVisibleRef.current = !!(position && suggestionsRef.current.length > 0);
 
-  const autocomplete = (tag: string) => {
+  const autocomplete = useCallback((tag: string) => {
     if (!editorActions || !("current" in editorActions) || !editorActions.current) return;
     const [word, index] = getCurrentWord();
     editorActions.current.removeText(index, word.length);
     editorActions.current.insertText(`#${tag}`);
     hide();
-  };
+  }, [editorActions, getCurrentWord, hide]);
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isVisibleRef.current) return;
     const suggestions = suggestionsRef.current;
     const selected = selectedRef.current;
@@ -89,18 +89,18 @@ const TagSuggestions = ({ editorRef, editorActions }: Props) => {
       e.preventDefault();
       e.stopPropagation();
     }
-  };
+  }, [autocomplete, hide]);
 
-  const handleInput = () => {
+  const handleInput = useCallback(() => {
     if (!editorRef.current) return;
     select(0);
     const [word, index] = getCurrentWord();
     const isActive = word.startsWith("#") && !word.slice(1).includes("#");
     isActive ? setPosition(getCaretCoordinates(editorRef.current, index)) : hide();
-  };
+  }, [editorRef, getCurrentWord, hide]);
 
   const listenersAreRegisteredRef = useRef(false);
-  const registerListeners = () => {
+  const registerListeners = useCallback(() => {
     const editor = editorRef.current;
     if (!editor || listenersAreRegisteredRef.current) return;
     editor.addEventListener("click", hide);
@@ -108,8 +108,9 @@ const TagSuggestions = ({ editorRef, editorActions }: Props) => {
     editor.addEventListener("keydown", handleKeyDown);
     editor.addEventListener("input", handleInput);
     listenersAreRegisteredRef.current = true;
-  };
-  useEffect(registerListeners, [!!editorRef.current]);
+  }, [editorRef, handleInput, handleKeyDown, hide]);
+  const editorElement = editorRef.current;
+  useEffect(registerListeners, [editorElement, registerListeners]);
 
   if (!isVisibleRef.current || !position) return null;
   return (

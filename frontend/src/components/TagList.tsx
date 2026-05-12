@@ -21,7 +21,7 @@ const TagList = () => {
 
   useEffect(() => {
     tagStore.fetchTags();
-  }, []);
+  }, [tagStore]);
 
   useEffect(() => {
     const sortedTags = Array.from(tagsText).sort();

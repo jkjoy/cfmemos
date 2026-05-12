@@ -16,6 +16,7 @@ export interface User {
   avatarUrl: string;
   role: User_Role;
   createdTime?: string;
+  createTime?: string;
   updatedTime?: string;
   rowStatus: number;
 }
@@ -26,6 +27,14 @@ export interface UserSetting {
   appearance: string;
   memoVisibility: string;
   telegramUserId?: string;
+}
+
+export interface UserAccessToken {
+  name: string;
+  accessToken: string;
+  description: string;
+  issuedAt?: string;
+  expiresAt?: string | null;
 }
 
 // ts-proto compatible helpers
@@ -40,6 +49,7 @@ export const User = {
       avatarUrl: object.avatarUrl ?? "",
       role: object.role ?? User_Role.ROLE_UNSPECIFIED,
       createdTime: object.createdTime,
+      createTime: object.createTime,
       updatedTime: object.updatedTime,
       rowStatus: object.rowStatus ?? 0,
     };

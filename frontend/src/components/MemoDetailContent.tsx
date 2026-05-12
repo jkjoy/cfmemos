@@ -1,6 +1,6 @@
 import { IconButton, Option, Select, Tooltip } from "@mui/joy";
 import copy from "copy-to-clipboard";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import FloatingNavButton from "@/components/FloatingNavButton";
@@ -33,7 +33,7 @@ const MemoDetailContent: React.FC<Props> = ({ memoId, mode = "page", onClose }) 
   const currentUser = useCurrentUser();
   const globalStore = useGlobalStore();
   const memoStore = useMemoStore();
-  const userV1Store = useUserV1Store();
+  const getOrFetchUserByUsername = useUserV1Store((state) => state.getOrFetchUserByUsername);
   const [creator, setCreator] = useState<User>();
   const [isPreparing, setIsPreparing] = useState<boolean>(true);
   const { systemStatus } = globalStore.state;
@@ -41,7 +41,7 @@ const MemoDetailContent: React.FC<Props> = ({ memoId, mode = "page", onClose }) 
   const allowEdit = memo?.creatorUsername === extractUsernameFromName(currentUser?.name);
   const referenceRelations = memo?.relationList.filter((relation) => relation.type === "REFERENCE") || [];
 
-  const handleMissingMemo = (error?: any) => {
+  const handleMissingMemo = useCallback((error?: any) => {
     if (error) {
       console.error(error);
     }
@@ -53,7 +53,7 @@ const MemoDetailContent: React.FC<Props> = ({ memoId, mode = "page", onClose }) 
 
     toast.error(error?.response?.data?.message || error?.response?.data?.error || t("message.memo-not-found"));
     onClose?.();
-  };
+  }, [mode, navigateTo, onClose, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +80,7 @@ const MemoDetailContent: React.FC<Props> = ({ memoId, mode = "page", onClose }) 
     return () => {
       cancelled = true;
     };
-  }, [memoId]);
+  }, [handleMissingMemo, memoId, memoStore]);
 
   useEffect(() => {
     if (!memo) {
@@ -89,7 +89,7 @@ const MemoDetailContent: React.FC<Props> = ({ memoId, mode = "page", onClose }) 
 
     let cancelled = false;
     const prepareCreator = async () => {
-      const user = await userV1Store.getOrFetchUserByUsername(memo.creatorUsername);
+      const user = await getOrFetchUserByUsername(memo.creatorUsername);
       if (!cancelled) {
         setCreator(user);
       }
@@ -100,7 +100,7 @@ const MemoDetailContent: React.FC<Props> = ({ memoId, mode = "page", onClose }) 
     return () => {
       cancelled = true;
     };
-  }, [memo?.creatorUsername]);
+  }, [getOrFetchUserByUsername, memo]);
 
   const handleMemoVisibilityOptionChanged = async (value: string) => {
     if (!memo) {

@@ -2,7 +2,6 @@ import { Select, Option, Button, IconButton, Divider } from "@mui/joy";
 import { isNumber, last, uniqBy } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
 import useLocalStorage from "react-use/lib/useLocalStorage";
 import { TAB_SPACE_WIDTH, UNKNOWN_ID, VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
 import useCurrentUser from "@/hooks/useCurrentUser";
@@ -31,6 +30,7 @@ interface Props {
   memoId?: MemoId;
   relationList?: MemoRelation[];
   onConfirm?: () => void;
+  onCancel?: () => void;
 }
 
 interface State {
@@ -43,14 +43,13 @@ interface State {
 
 const MemoEditor = (props: Props) => {
   const { className, editorClassName, cacheKey, memoId, onConfirm } = props;
-  const { i18n } = useTranslation();
   const t = useTranslate();
   const contentCacheKey = `memo-editor-${cacheKey}`;
   const [contentCache, setContentCache] = useLocalStorage<string>(contentCacheKey, "");
   const {
     state: { systemStatus },
   } = useGlobalStore();
-  const userV1Store = useUserV1Store();
+  const userSetting = useUserV1Store((state) => state.userSetting as UserSetting);
   const memoStore = useMemoStore();
   const tagStore = useTagStore();
   const resourceStore = useResourceStore();
@@ -65,17 +64,23 @@ const MemoEditor = (props: Props) => {
   const [hasContent, setHasContent] = useState<boolean>(false);
   const [isInIME, setIsInIME] = useState(false);
   const editorRef = useRef<EditorRefActions>(null);
-  const userSetting = userV1Store.userSetting as UserSetting;
+  const initialContentRef = useRef(contentCache || "");
+  const contentCacheRef = useRef(contentCache);
+  contentCacheRef.current = contentCache;
   const referenceRelations = memoId
     ? state.relationList.filter(
         (relation) => relation.memoId === memoId && relation.relatedMemoId !== memoId && relation.type === "REFERENCE"
       )
     : state.relationList.filter((relation) => relation.type === "REFERENCE");
 
-  useEffect(() => {
-    editorRef.current?.setContent(contentCache || "");
-    handleEditorFocus();
+  const handleEditorFocus = useCallback(() => {
+    editorRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    editorRef.current?.setContent(initialContentRef.current);
+    handleEditorFocus();
+  }, [handleEditorFocus]);
 
   useEffect(() => {
     let visibility = userSetting.memoVisibility;
@@ -99,13 +104,13 @@ const MemoEditor = (props: Props) => {
             resourceList: memo.resourceList,
             relationList: memo.relationList,
           }));
-          if (!contentCache) {
+          if (!contentCacheRef.current) {
             editorRef.current?.setContent(memo.content ?? "");
           }
         }
       });
     }
-  }, [memoId]);
+  }, [handleEditorFocus, memoId, memoStore]);
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (!editorRef.current) {
@@ -217,7 +222,7 @@ const MemoEditor = (props: Props) => {
     }));
   };
 
-  const handleUploadResource = async (file: File) => {
+  const handleUploadResource = useCallback(async (file: File) => {
     setState((state) => {
       return {
         ...state,
@@ -240,9 +245,9 @@ const MemoEditor = (props: Props) => {
       };
     });
     return resource;
-  };
+  }, [resourceStore]);
 
-  const uploadMultiFiles = async (files: FileList) => {
+  const uploadMultiFiles = useCallback(async (files: FileList) => {
     const uploadedResourceList: Resource[] = [];
     for (const file of files) {
       const resource = await handleUploadResource(file);
@@ -265,30 +270,30 @@ const MemoEditor = (props: Props) => {
         resourceList: [...prevState.resourceList, ...uploadedResourceList],
       }));
     }
-  };
+  }, [handleUploadResource, memoId, resourceStore]);
 
-  const handleDropEvent = async (event: React.DragEvent) => {
+  const handleDropEvent = useCallback(async (event: React.DragEvent) => {
     if (event.dataTransfer && event.dataTransfer.files.length > 0) {
       event.preventDefault();
       await uploadMultiFiles(event.dataTransfer.files);
     }
-  };
+  }, [uploadMultiFiles]);
 
-  const handlePasteEvent = async (event: React.ClipboardEvent) => {
+  const handlePasteEvent = useCallback(async (event: React.ClipboardEvent) => {
     if (event.clipboardData && event.clipboardData.files.length > 0) {
       event.preventDefault();
       await uploadMultiFiles(event.clipboardData.files);
     }
-  };
+  }, [uploadMultiFiles]);
 
-  const handleContentChange = (content: string) => {
+  const handleContentChange = useCallback((content: string) => {
     setHasContent(content !== "");
     if (content !== "") {
       setContentCache(content);
     } else {
       localStorage.removeItem(contentCacheKey);
     }
-  };
+  }, [contentCacheKey, setContentCache]);
 
   const handleSaveBtnClick = async () => {
     if (state.isRequesting) {
@@ -404,10 +409,6 @@ const MemoEditor = (props: Props) => {
     editorRef.current?.insertText(`#${tag} `);
   }, []);
 
-  const handleEditorFocus = () => {
-    editorRef.current?.focus();
-  };
-
   const editorConfig = useMemo(
     () => ({
       className: editorClassName ?? "",
@@ -416,7 +417,7 @@ const MemoEditor = (props: Props) => {
       onContentChange: handleContentChange,
       onPaste: handlePasteEvent,
     }),
-    [i18n.language]
+    [editorClassName, handleContentChange, handlePasteEvent, t]
   );
 
   const allowSave = (hasContent || state.resourceList.length > 0) && !state.isUploadingResource && !state.isRequesting;

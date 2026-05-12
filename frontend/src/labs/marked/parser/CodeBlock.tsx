@@ -19,7 +19,7 @@ const renderer = (rawStr: string) => {
       language,
     }).value;
     highlightedCode = temp;
-  } catch (error) {
+  } catch {
     // do nth
   }
 

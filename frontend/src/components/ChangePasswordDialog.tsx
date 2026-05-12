@@ -23,7 +23,7 @@ const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
       toast.error("Demo mode does not support this operation.");
       destroy();
     }
-  }, []);
+  }, [destroy, profile.mode]);
 
   const handleCloseBtnClick = () => {
     destroy();

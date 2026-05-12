@@ -34,7 +34,7 @@ interface DailyUsageStat {
 const UsageHeatMap = () => {
   const t = useTranslate();
   const filterStore = useFilterStore();
-  const userV1Store = useUserV1Store();
+  const getOrFetchUserByUsername = useUserV1Store((state) => state.getOrFetchUserByUsername);
   const user = useCurrentUser();
   const memoStore = useMemoStore();
   const todayTimeStamp = getDateStampByDate(Date.now());
@@ -53,13 +53,13 @@ const UsageHeatMap = () => {
   const containerElRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    userV1Store.getOrFetchUserByUsername(extractUsernameFromName(user.name)).then((user) => {
+    getOrFetchUserByUsername(extractUsernameFromName(user.name)).then((user) => {
       if (!user) {
         return;
       }
       setCreatedDays(Math.ceil((Date.now() - getTimeStampByDate(user.createTime)) / 1000 / 3600 / 24));
     });
-  }, [user.name]);
+  }, [getOrFetchUserByUsername, user.name]);
 
   useEffect(() => {
     if (memos.length === 0) {
@@ -85,7 +85,7 @@ const UsageHeatMap = () => {
       .catch((error) => {
         console.error(error);
       });
-  }, [memos.length, user.name]);
+  }, [beginDayTimestamp, memos.length, usedDaysAmount, user.name]);
 
   const handleUsageStatItemMouseEnter = useCallback((event: React.MouseEvent, item: DailyUsageStat) => {
     const tempDiv = document.createElement("div");
@@ -101,7 +101,7 @@ const UsageHeatMap = () => {
       tempDiv.style.left = bounding.left + tempDiv.clientWidth * 0.4 + "px";
       tempDiv.className += " offset-left";
     }
-  }, []);
+  }, [t]);
 
   const handleUsageStatItemMouseLeave = useCallback(() => {
     document.body.querySelectorAll("div.usage-detail-container.pop-up").forEach((node) => node.remove());
@@ -115,7 +115,7 @@ const UsageHeatMap = () => {
       filterStore.setFromAndToFilter(item.timestamp, item.timestamp + DAILY_TIMESTAMP);
       setCurrentStat(item);
     }
-  }, []);
+  }, [filterStore]);
 
   // This interpolation is not being used because of the current styling,
   // but it can improve translation quality by giving it a more meaningful context

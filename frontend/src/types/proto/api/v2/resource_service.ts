@@ -3,12 +3,18 @@ export interface Resource {
   name: string;
   uid: string;
   createdTime?: string;
+  createdTs?: number;
   filename: string;
   externalLink: string;
   type: string;
   size: number;
   memo?: any;
   memoId?: number;
+}
+
+export interface UpdateResourceRequest {
+  resource: Partial<Resource> & { id: number };
+  updateMask: string[];
 }
 
 // ts-proto compatible helpers

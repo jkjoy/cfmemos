@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import Empty from "@/components/Empty";
 import Memo from "@/components/Memo";
@@ -53,9 +53,17 @@ const Explore = () => {
     .filter((m) => m.rowStatus === "NORMAL" && m.visibility !== "PRIVATE")
     .sort((mi, mj) => mj.displayTs - mi.displayTs);
 
+  const handleFetchMoreClick = useCallback(async () => {
+    try {
+      await memoStore.fetchAllMemos(DEFAULT_MEMO_LIMIT, memos.length);
+    } catch (error: any) {
+      toast.error(error.response.data.message);
+    }
+  }, [memoStore, memos.length]);
+
   useEffect(() => {
     memoStore.setLoadingStatus("incomplete");
-  }, []);
+  }, [memoStore]);
 
   useEffect(() => {
     if (!fetchMoreRef.current) return;
@@ -68,15 +76,7 @@ const Explore = () => {
     observer.observe(fetchMoreRef.current);
 
     return () => observer.disconnect();
-  }, [loadingStatus]);
-
-  const handleFetchMoreClick = async () => {
-    try {
-      await memoStore.fetchAllMemos(DEFAULT_MEMO_LIMIT, memos.length);
-    } catch (error: any) {
-      toast.error(error.response.data.message);
-    }
-  };
+  }, [handleFetchMoreClick, loadingStatus]);
 
   return (
     <section className="@container w-full max-w-3xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">

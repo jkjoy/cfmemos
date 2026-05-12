@@ -13,7 +13,7 @@ const SearchBar = () => {
   useEffect(() => {
     const text = filterStore.getState().text;
     setQueryText(text === undefined ? "" : text);
-  }, [filterStore.state.text]);
+  }, [filterStore, filterStore.state.text]);
 
   useDebounce(
     () => {

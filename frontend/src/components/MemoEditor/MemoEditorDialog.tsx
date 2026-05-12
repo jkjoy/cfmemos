@@ -16,7 +16,7 @@ const MemoEditorDialog: React.FC<Props> = ({ memoId, relationList, destroy }: Pr
 
   useEffect(() => {
     tagStore.fetchTags();
-  }, []);
+  }, [tagStore]);
 
   const handleCloseBtnClick = () => {
     destroy();

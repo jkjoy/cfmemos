@@ -18,24 +18,25 @@ interface NavLinkItem {
 const Navigation = () => {
   const t = useTranslate();
   const user = useCurrentUser();
-  const inboxStore = useInboxStore();
-  const hasUnreadInbox = inboxStore.inboxes.some((inbox) => inbox.status === Inbox_Status.UNREAD);
+  const inboxes = useInboxStore((state) => state.inboxes);
+  const fetchInboxes = useInboxStore((state) => state.fetchInboxes);
+  const hasUnreadInbox = inboxes.some((inbox) => inbox.status === Inbox_Status.UNREAD);
 
   useEffect(() => {
     if (!user) {
       return;
     }
 
-    inboxStore.fetchInboxes();
+    fetchInboxes();
     // Fetch inboxes every 5 minutes.
     const timer = setInterval(async () => {
-      await inboxStore.fetchInboxes();
+      await fetchInboxes();
     }, 1000 * 60 * 5);
 
     return () => {
       clearInterval(timer);
     };
-  }, []);
+  }, [fetchInboxes, user]);
 
   const homeNavLink: NavLinkItem = {
     id: "header-home",

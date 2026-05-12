@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { systemServiceClient } from "@/grpcweb";
 import * as api from "@/helpers/api";
 import storage from "@/helpers/storage";
@@ -61,40 +62,52 @@ export const initialGlobalState = async () => {
 
 export const useGlobalStore = () => {
   const state = useAppSelector((state) => state.global);
+  const stateRef = useRef(state);
+  const apiRef = useRef<ReturnType<typeof buildGlobalStoreApi> | null>(null);
 
-  return {
-    state,
-    getState: () => {
-      return store.getState().global;
-    },
-    getDisablePublicMemos: () => {
-      return store.getState().global.systemStatus.disablePublicMemos;
-    },
-    isDev: () => {
-      return state.systemStatus.profile.mode !== "prod";
-    },
-    fetchSystemStatus: async () => {
-      const { data: systemStatus } = await api.getSystemStatus();
-      const { systemInfo } = await systemServiceClient.getSystemInfo({});
-      systemStatus.dbSize = systemInfo?.dbSize || 0;
-      store.dispatch(setGlobalState({ systemStatus: systemStatus }));
-      return systemStatus;
-    },
-    setSystemStatus: (systemStatus: Partial<SystemStatus>) => {
-      store.dispatch(
-        setGlobalState({
-          systemStatus: {
-            ...state.systemStatus,
-            ...systemStatus,
-          },
-        })
-      );
-    },
-    setLocale: (locale: Locale) => {
-      store.dispatch(setLocale(locale));
-    },
-    setAppearance: (appearance: Appearance) => {
-      store.dispatch(setAppearance(appearance));
-    },
-  };
+  stateRef.current = state;
+
+  if (!apiRef.current) {
+    apiRef.current = buildGlobalStoreApi(stateRef);
+  }
+
+  return apiRef.current!;
 };
+
+const buildGlobalStoreApi = (stateRef: React.MutableRefObject<ReturnType<typeof store.getState>["global"]>) => ({
+  get state() {
+    return stateRef.current;
+  },
+  getState: () => {
+    return store.getState().global;
+  },
+  getDisablePublicMemos: () => {
+    return store.getState().global.systemStatus.disablePublicMemos;
+  },
+  isDev: () => {
+    return stateRef.current.systemStatus.profile.mode !== "prod";
+  },
+  fetchSystemStatus: async () => {
+    const { data: systemStatus } = await api.getSystemStatus();
+    const { systemInfo } = await systemServiceClient.getSystemInfo({});
+    systemStatus.dbSize = systemInfo?.dbSize || 0;
+    store.dispatch(setGlobalState({ systemStatus: systemStatus }));
+    return systemStatus;
+  },
+  setSystemStatus: (systemStatus: Partial<SystemStatus>) => {
+    store.dispatch(
+      setGlobalState({
+        systemStatus: {
+          ...stateRef.current.systemStatus,
+          ...systemStatus,
+        },
+      })
+    );
+  },
+  setLocale: (locale: Locale) => {
+    store.dispatch(setLocale(locale));
+  },
+  setAppearance: (appearance: Appearance) => {
+    store.dispatch(setAppearance(appearance));
+  },
+});

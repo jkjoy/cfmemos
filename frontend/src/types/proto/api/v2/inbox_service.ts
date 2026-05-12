@@ -16,6 +16,7 @@ export interface Inbox {
   receiver: string;
   status: Inbox_Status;
   createdTime?: string;
+  createTime?: string;
   type: Inbox_Type;
   activityId?: number;
 }

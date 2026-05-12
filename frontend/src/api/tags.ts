@@ -1,5 +1,10 @@
 import apiClient from './client';
 
+interface TagApiParams {
+  creatorId?: number;
+  limit?: number;
+}
+
 /**
  * Tag API Client
  * Provides methods to interact with tag endpoints
@@ -10,8 +15,8 @@ export const tagAPI = {
    * @param {number} creatorId - Optional creator ID to filter tags
    * @returns {Promise<Array>} List of tags with memo counts
    */
-  async list(creatorId = null) {
-    const params = {};
+  async list(creatorId: number | null = null) {
+    const params: TagApiParams = {};
     if (creatorId) params.creatorId = creatorId;
 
     return apiClient.get('/tag', { params });
@@ -22,7 +27,7 @@ export const tagAPI = {
    * @param {string} name - Tag name
    * @returns {Promise<Object>} Created tag
    */
-  async create(name) {
+  async create(name: string) {
     return apiClient.post('/tag', { name });
   },
 
@@ -40,7 +45,7 @@ export const tagAPI = {
    * @param {string} name - Tag name to delete
    * @returns {Promise<Object>} Deletion result
    */
-  async delete(name) {
+  async delete(name: string) {
     return apiClient.post('/tag/delete', { name });
   },
 
@@ -49,7 +54,7 @@ export const tagAPI = {
    * @param {number} id - Tag ID to delete
    * @returns {Promise<Object>} Deletion result
    */
-  async deleteById(id) {
+  async deleteById(id: number) {
     return apiClient.delete(`/tag/${id}`);
   }
 };

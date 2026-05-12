@@ -16,14 +16,15 @@ import { useTranslate } from "@/utils/i18n";
 function groupResourcesByDate(resources: Resource[]) {
   const grouped = new Map<number, Resource[]>();
   resources.forEach((item) => {
-    const date = new Date(item.createdTs as any);
+    const timestamp = item.createdTs ?? (item.createdTime ? new Date(item.createdTime).getTime() : Date.now());
+    const date = new Date(timestamp);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
-    const timestamp = Date.UTC(year, month - 1, 1);
-    if (!grouped.has(timestamp)) {
-      grouped.set(timestamp, []);
+    const monthTimestamp = Date.UTC(year, month - 1, 1);
+    if (!grouped.has(monthTimestamp)) {
+      grouped.set(monthTimestamp, []);
     }
-    grouped.get(timestamp)?.push(item);
+    grouped.get(monthTimestamp)?.push(item);
   });
   return grouped;
 }
@@ -48,7 +49,7 @@ const Resources = () => {
       setResources(resources);
       loadingState.setFinish();
     });
-  }, []);
+  }, [loadingState]);
 
   const handleDeleteUnusedResources = () => {
     showCommonDialog({
@@ -56,7 +57,7 @@ const Resources = () => {
       content: "Are you sure to delete all unused resources? This action cannot be undone.",
       style: "warning",
       dialogName: "delete-unused-resources-dialog",
-      onConfirm: async () => {
+        onConfirm: async () => {
         for (const resource of unusedResources) {
           await resourceServiceClient.deleteResource({ id: resource.id });
         }

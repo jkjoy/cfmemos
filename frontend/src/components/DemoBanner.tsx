@@ -1,26 +1,11 @@
-import { useEffect, useState } from "react";
 import { useGlobalStore } from "@/store/module";
 import Icon from "./Icon";
-
-interface State {
-  show: boolean;
-}
 
 const DemoBanner: React.FC = () => {
   const globalStore = useGlobalStore();
   const profile = globalStore.state.systemStatus.profile;
-  const [state, setState] = useState<State>({
-    show: false,
-  });
 
-  useEffect(() => {
-    const isDemo = profile.mode === "demo";
-    setState({
-      show: isDemo,
-    });
-  }, []);
-
-  if (!state.show) return null;
+  if (profile.mode !== "demo") return null;
 
   return (
     <div className="z-10 flex flex-row items-center justify-center w-full py-2 text-sm sm:text-lg font-medium dark:text-gray-300 bg-white dark:bg-zinc-700 shadow">

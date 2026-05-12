@@ -37,7 +37,7 @@ const EmbedMemo = () => {
           toast.error(error.response.data.message);
         });
     }
-  }, []);
+  }, [loadingState, memoStore, params.memoId]);
 
   return (
     <section className="w-full h-full flex flex-row justify-start items-start p-2">

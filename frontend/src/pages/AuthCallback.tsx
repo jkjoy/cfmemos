@@ -18,7 +18,7 @@ const AuthCallback = () => {
   const t = useTranslate();
   const navigateTo = useNavigateTo();
   const [searchParams] = useSearchParams();
-  const userV1Store = useUserV1Store();
+  const fetchCurrentUser = useUserV1Store((state) => state.fetchCurrentUser);
   const [state, setState] = useState<State>({
     loading: true,
     errorMessage: "",
@@ -40,7 +40,7 @@ const AuthCallback = () => {
               errorMessage: "",
             });
             if (user) {
-              await userV1Store.fetchCurrentUser();
+              await fetchCurrentUser();
               navigateTo("/");
             } else {
               toast.error(t("message.login-failed"));
@@ -60,7 +60,7 @@ const AuthCallback = () => {
         errorMessage: "Failed to authorize. Invalid state passed to the auth callback.",
       });
     }
-  }, [searchParams]);
+  }, [fetchCurrentUser, navigateTo, searchParams, t]);
 
   return (
     <div className="p-4 w-full h-full flex justify-center items-center">

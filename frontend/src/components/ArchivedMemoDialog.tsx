@@ -31,7 +31,7 @@ const ArchivedMemoDialog: React.FC<Props> = (props: Props) => {
       .finally(() => {
         loadingState.setFinish();
       });
-  }, [memos]);
+  }, [loadingState, memoStore, memos]);
 
   return (
     <>

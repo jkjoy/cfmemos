@@ -44,7 +44,7 @@ const CreateWebhookDialog: React.FC<Props> = (props: Props) => {
           });
         });
     }
-  }, []);
+  }, [webhookId]);
 
   const setPartialState = (partialState: Partial<State>) => {
     setState({
