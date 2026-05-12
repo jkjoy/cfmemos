@@ -193,6 +193,18 @@ export const userServiceClient = {
     return { user: updatedUser };
   },
 
+  async updateUserPassword(req: { id: number; currentPassword?: string; newPassword: string }) {
+    const payload: { currentPassword?: string; newPassword: string } = {
+      newPassword: req.newPassword,
+    };
+    if (req.currentPassword !== undefined) {
+      payload.currentPassword = req.currentPassword;
+    }
+
+    await request('PUT', `/api/v1/user/${req.id}/password`, payload);
+    return {};
+  },
+
   async createUser(req: { user: any }) {
     // 从 name 格式 "users/username" 中提取 username
     const username = req.user.name ? req.user.name.replace(/^users\//, '') : req.user.username;
@@ -532,4 +544,3 @@ export const webhookServiceClient = {
     }
   },
 };
-

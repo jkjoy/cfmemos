@@ -253,9 +253,14 @@ app.put('/:id/password', async (c) => {
     const db = c.env.DB;
     const id = c.req.param('id');
     const body = await c.req.json();
+    const currentUser = c.get('user');
+
+    if (!currentUser) {
+      return errorResponse('Valid user required', 403);
+    }
     
-    if (!body.currentPassword || !body.newPassword) {
-      return errorResponse('Current password and new password are required');
+    if (!body.newPassword) {
+      return errorResponse('New password is required');
     }
     
     // 检查新密码长度
@@ -264,17 +269,31 @@ app.put('/:id/password', async (c) => {
     }
     
     // 获取用户当前密码
-    const userStmt = db.prepare('SELECT password_hash FROM users WHERE id = ?');
+    const userStmt = db.prepare('SELECT id, role, password_hash FROM users WHERE id = ?');
     const user = await userStmt.bind(id).first();
     
     if (!user) {
       return errorResponse('User not found', 404);
     }
+
+    const isSelf = Number(currentUser.id) === Number(id);
+    const currentUserRole = currentUser.role || (currentUser.is_admin ? 'admin' : 'user');
+    const canResetPassword = canModifyRole(currentUserRole, user.role);
+
+    if (!isSelf && !canResetPassword) {
+      return errorResponse('Permission denied: Cannot modify this user', 403);
+    }
     
-    // 验证当前密码
-    const isValidPassword = await verifyPassword(body.currentPassword, user.password_hash);
-    if (!isValidPassword) {
-      return errorResponse('Current password is incorrect', 400);
+    // 自己修改密码必须验证当前密码；管理员重置其他用户密码无需旧密码。
+    if (isSelf) {
+      if (!body.currentPassword) {
+        return errorResponse('Current password is required');
+      }
+
+      const isValidPassword = await verifyPassword(body.currentPassword, user.password_hash);
+      if (!isValidPassword) {
+        return errorResponse('Current password is incorrect', 400);
+      }
     }
     
     // 生成新密码哈希

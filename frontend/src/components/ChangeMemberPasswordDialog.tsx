@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useUserV1Store, UserNamePrefix } from "@/store/v1";
+import { userServiceClient } from "@/grpcweb";
 import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
@@ -12,7 +12,6 @@ interface Props extends DialogProps {
 const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
   const { user, destroy } = props;
   const t = useTranslate();
-  const userV1Store = useUserV1Store();
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordAgain, setNewPasswordAgain] = useState("");
 
@@ -47,18 +46,15 @@ const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
     }
 
     try {
-      await userV1Store.updateUser(
-        {
-          name: `${UserNamePrefix}${user.username}`,
-          password: newPassword,
-        },
-        ["password"]
-      );
+      await userServiceClient.updateUserPassword({
+        id: user.id,
+        newPassword,
+      });
       toast(t("message.password-changed"));
       handleCloseBtnClick();
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response.data.message);
+      toast.error(error.message || "Failed to update password");
     }
   };
 
@@ -72,10 +68,17 @@ const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
           <Icon.X />
         </button>
       </div>
-      <div className="dialog-content-container">
+      <form
+        className="dialog-content-container"
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleSaveBtnClick();
+        }}
+      >
         <p className="text-sm mb-1">{t("auth.new-password")}</p>
         <input
           type="password"
+          autoComplete="new-password"
           className="input-text"
           placeholder={t("auth.new-password")}
           value={newPassword}
@@ -84,6 +87,7 @@ const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
         <p className="text-sm mb-1 mt-2">{t("auth.repeat-new-password")}</p>
         <input
           type="password"
+          autoComplete="new-password"
           className="input-text"
           placeholder={t("auth.repeat-new-password")}
           value={newPasswordAgain}
@@ -93,11 +97,11 @@ const ChangeMemberPasswordDialog: React.FC<Props> = (props: Props) => {
           <span className="btn-text" onClick={handleCloseBtnClick}>
             {t("common.cancel")}
           </span>
-          <span className="btn-primary" onClick={handleSaveBtnClick}>
+          <button type="submit" className="btn-primary">
             {t("common.save")}
-          </span>
+          </button>
         </div>
-      </div>
+      </form>
     </>
   );
 };

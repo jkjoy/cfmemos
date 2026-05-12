@@ -3069,7 +3069,7 @@ var CODE_BLOCK_REG = /```[\s\S]*?```/g;
 var INLINE_CODE_REG = /`[^`\n]*`/g;
 var MARKDOWN_LINK_REG = /!?\[[^\]]*\]\([^)]+\)/g;
 var PLAIN_LINK_REG = /(?:https?|chrome|edge):\/\/\S+/g;
-var TAG_NAME_REG = /#([^\s#,]+)/g;
+var TAG_NAME_REG = /(^|[\s(\[{"'“‘（【《「『<,.;:!?，。！？；：、])#([^\s#,]+)/g;
 function buildTagSelectColumns(schema) {
   return [
     "id",
@@ -3117,7 +3117,7 @@ function extractTagNamesFromMemoContent(content) {
   }
   const sanitizedContent = stripIgnoredTagSegments(content);
   const tagMatches = [...sanitizedContent.matchAll(TAG_NAME_REG)];
-  return [...new Set(tagMatches.map((match2) => match2[1]))];
+  return [...new Set(tagMatches.map((match2) => match2[2]))];
 }
 __name(extractTagNamesFromMemoContent, "extractTagNamesFromMemoContent");
 async function findTagByName(db, tagName, creatorId = null) {
@@ -4091,6 +4091,16 @@ app2.patch("/:id", async (c) => {
     if (result.changes === 0) {
       return errorResponse("Failed to update memo", 500);
     }
+    if (body.content !== void 0) {
+      await db.prepare(`
+        DELETE FROM memo_tags
+        WHERE memo_id = ?
+      `).bind(id).run();
+      const tagNames = extractTagNamesFromMemoContent(body.content);
+      for (const tagName of tagNames) {
+        await attachTagToMemo(db, id, tagName, memo.creator_id);
+      }
+    }
     if (body.deleteResourceIds && Array.isArray(body.deleteResourceIds)) {
       for (const resourceId of body.deleteResourceIds) {
         const deleteStmt = db.prepare(`
@@ -4226,6 +4236,14 @@ app2.put("/:id", async (c) => {
     const result = await updateStmt.bind(...updateValues).run();
     if (result.changes === 0) {
       return errorResponse("Failed to update memo", 500);
+    }
+    await db.prepare(`
+      DELETE FROM memo_tags
+      WHERE memo_id = ?
+    `).bind(id).run();
+    const tagNames = extractTagNamesFromMemoContent(body.content);
+    for (const tagName of tagNames) {
+      await attachTagToMemo(db, id, tagName, memo.creator_id);
     }
     if (body.deleteResourceIds && Array.isArray(body.deleteResourceIds)) {
       for (const resourceId of body.deleteResourceIds) {
@@ -4900,20 +4918,35 @@ app5.put("/:id/password", async (c) => {
     const db = c.env.DB;
     const id = c.req.param("id");
     const body = await c.req.json();
-    if (!body.currentPassword || !body.newPassword) {
-      return errorResponse("Current password and new password are required");
+    const currentUser = c.get("user");
+    if (!currentUser) {
+      return errorResponse("Valid user required", 403);
+    }
+    if (!body.newPassword) {
+      return errorResponse("New password is required");
     }
     if (body.newPassword.length < 6) {
       return errorResponse("New password must be at least 6 characters long");
     }
-    const userStmt = db.prepare("SELECT password_hash FROM users WHERE id = ?");
+    const userStmt = db.prepare("SELECT id, role, password_hash FROM users WHERE id = ?");
     const user = await userStmt.bind(id).first();
     if (!user) {
       return errorResponse("User not found", 404);
     }
-    const isValidPassword = await verifyPassword(body.currentPassword, user.password_hash);
-    if (!isValidPassword) {
-      return errorResponse("Current password is incorrect", 400);
+    const isSelf = Number(currentUser.id) === Number(id);
+    const currentUserRole = currentUser.role || (currentUser.is_admin ? "admin" : "user");
+    const canResetPassword = canModifyRole(currentUserRole, user.role);
+    if (!isSelf && !canResetPassword) {
+      return errorResponse("Permission denied: Cannot modify this user", 403);
+    }
+    if (isSelf) {
+      if (!body.currentPassword) {
+        return errorResponse("Current password is required");
+      }
+      const isValidPassword = await verifyPassword(body.currentPassword, user.password_hash);
+      if (!isValidPassword) {
+        return errorResponse("Current password is incorrect", 400);
+      }
     }
     const newHashedPassword = await hashPassword(body.newPassword);
     const updateStmt = db.prepare(`

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { userServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useGlobalStore } from "@/store/module";
-import { useUserV1Store } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
@@ -12,9 +12,9 @@ type Props = DialogProps;
 const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
   const t = useTranslate();
   const currentUser = useCurrentUser();
-  const userV1Store = useUserV1Store();
   const globalStore = useGlobalStore();
   const profile = globalStore.state.systemStatus.profile;
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordAgain, setNewPasswordAgain] = useState("");
 
@@ -29,6 +29,11 @@ const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
     destroy();
   };
 
+  const handleCurrentPasswordChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value as string;
+    setCurrentPassword(text);
+  };
+
   const handleNewPasswordChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value as string;
     setNewPassword(text);
@@ -40,7 +45,7 @@ const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
   };
 
   const handleSaveBtnClick = async () => {
-    if (newPassword === "" || newPasswordAgain === "") {
+    if (currentPassword === "" || newPassword === "" || newPasswordAgain === "") {
       toast.error(t("message.fill-all"));
       return;
     }
@@ -52,18 +57,16 @@ const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
     }
 
     try {
-      await userV1Store.updateUser(
-        {
-          name: currentUser.name,
-          password: newPassword,
-        },
-        ["password"]
-      );
+      await userServiceClient.updateUserPassword({
+        id: currentUser.id,
+        currentPassword,
+        newPassword,
+      });
       toast.success(t("message.password-changed"));
       handleCloseBtnClick();
     } catch (error: any) {
       console.error(error);
-      toast.error(error.response.data.message);
+      toast.error(error.message || "Failed to update password");
     }
   };
 
@@ -75,8 +78,23 @@ const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
           <Icon.X />
         </button>
       </div>
-      <div className="dialog-content-container">
-        <p className="text-sm mb-1">{t("auth.new-password")}</p>
+      <form
+        className="dialog-content-container"
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleSaveBtnClick();
+        }}
+      >
+        <p className="text-sm mb-1">{t("common.password")}</p>
+        <input
+          type="password"
+          autoComplete="current-password"
+          className="input-text"
+          placeholder={t("common.password")}
+          value={currentPassword}
+          onChange={handleCurrentPasswordChanged}
+        />
+        <p className="text-sm mb-1 mt-2">{t("auth.new-password")}</p>
         <input
           type="password"
           autoComplete="new-password"
@@ -98,11 +116,11 @@ const ChangePasswordDialog: React.FC<Props> = ({ destroy }: Props) => {
           <span className="btn-text" onClick={handleCloseBtnClick}>
             {t("common.cancel")}
           </span>
-          <span className="btn-primary" onClick={handleSaveBtnClick}>
+          <button type="submit" className="btn-primary">
             {t("common.save")}
-          </span>
+          </button>
         </div>
-      </div>
+      </form>
     </>
   );
 };
